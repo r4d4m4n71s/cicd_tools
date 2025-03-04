@@ -103,12 +103,12 @@ def detect_template_type(project_dir: Path) -> Optional[str]:
         return template_config["name"]
         
     # Try to detect based on project structure
-    if _is_simple_project(project_dir):
-        return "simple_project"
+    if _is_github_project(project_dir):
+        return "github_project"
     elif _is_development_project(project_dir):
         return "development_project"
-    elif _is_github_project(project_dir):
-        return "github_project"
+    elif _is_simple_project(project_dir):
+        return "simple_project"
         
     return None
 

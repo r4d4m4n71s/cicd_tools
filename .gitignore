@@ -1,0 +1,4 @@
+*.pyc
+cicd_tools.egg-info/
+.coverage
+.vscode/
