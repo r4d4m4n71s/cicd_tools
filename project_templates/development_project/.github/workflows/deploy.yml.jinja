@@ -1,0 +1,60 @@
+name: Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      deploy_target:
+        description: 'Deployment Target'
+        required: true
+        default: 'test'
+        type: choice
+        options:
+          - test
+          - prod
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '{{ python_version }}'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install twine
+        
+    - name: Download beta artifacts
+      if: ${{ '{{' }} github.event.inputs.deploy_target == 'test' {{ '}}' }}
+      uses: actions/download-artifact@v3
+      with:
+        name: release-beta
+        path: dist/beta
+        
+    - name: Download production artifacts
+      if: ${{ '{{' }} github.event.inputs.deploy_target == 'prod' {{ '}}' }}
+      uses: actions/download-artifact@v3
+      with:
+        name: release-prod
+        path: dist/release
+        
+    - name: Deploy to TestPyPI
+      if: ${{ '{{' }} github.event.inputs.deploy_target == 'test' {{ '}}' }}
+      env:
+        TWINE_USERNAME: ${{ '{{' }} secrets.TEST_PYPI_USERNAME {{ '}}' }}
+        TWINE_PASSWORD: ${{ '{{' }} secrets.TEST_PYPI_PASSWORD {{ '}}' }}
+      run: |
+        twine upload --repository testpypi dist/beta/*
+        
+    - name: Deploy to PyPI
+      if: ${{ '{{' }} github.event.inputs.deploy_target == 'prod' {{ '}}' }}
+      env:
+        TWINE_USERNAME: ${{ '{{' }} secrets.PYPI_USERNAME {{ '}}' }}
+        TWINE_PASSWORD: ${{ '{{' }} secrets.PYPI_PASSWORD {{ '}}' }}
+      run: |
+        twine upload dist/release/*

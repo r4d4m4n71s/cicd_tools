@@ -1,0 +1,79 @@
+# Development Project Template Configuration
+
+_version: "0.1.0"
+_description: "A Python development project template with CI/CD workflows"
+
+# Project Information
+project_name:
+  type: str
+  help: "Name of the project"
+  default: "development-project"
+
+project_description:
+  type: str
+  help: "Short description of the project"
+  default: "A Python development project with CI/CD workflows"
+
+author_name:
+  type: str
+  help: "Author name"
+  default: "Your Name"
+
+author_email:
+  type: str
+  help: "Author email"
+  default: "your.email@example.com"
+
+# Project Configuration
+python_version:
+  type: str
+  help: "Python version"
+  default: "3.8"
+  choices:
+    - "3.8"
+    - "3.9"
+    - "3.10"
+    - "3.11"
+    - "3.12"
+
+license:
+  type: str
+  help: "License"
+  default: "MIT"
+  choices:
+    - "MIT"
+    - "Apache-2.0"
+    - "GPL-3.0"
+    - "BSD-3-Clause"
+
+# CI/CD Configuration
+use_github_actions:
+  type: bool
+  help: "Use GitHub Actions for CI/CD"
+  default: true
+
+use_pre_commit:
+  type: bool
+  help: "Use pre-commit hooks"
+  default: true
+
+# Package Configuration
+use_pytest:
+  type: bool
+  help: "Use pytest for testing"
+  default: true
+
+use_mypy:
+  type: bool
+  help: "Use mypy for type checking"
+  default: true
+
+use_black:
+  type: bool
+  help: "Use black for code formatting"
+  default: true
+
+use_isort:
+  type: bool
+  help: "Use isort for import sorting"
+  default: true

@@ -1,0 +1,20 @@
+"""
+Tests for the main module.
+"""
+
+import unittest
+
+from {{ project_name.replace('-', '_') }}.main import hello
+
+
+class TestMain(unittest.TestCase):
+    """Tests for the main module."""
+    
+    def test_hello(self):
+        """Test the hello function."""
+        self.assertEqual(hello(), "Hello, World!")
+        self.assertEqual(hello("Test"), "Hello, Test!")
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -1,0 +1,64 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_type:
+        description: 'Release Type'
+        required: true
+        default: 'beta'
+        type: choice
+        options:
+          - beta
+          - prod
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '{{ python_version }}'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install build bump2version twine
+        
+    - name: Configure Git
+      run: |
+        git config --local user.email "actions@github.com"
+        git config --local user.name "GitHub Actions"
+        
+    - name: Bump version (Production)
+      if: ${{ '{{' }} github.event.inputs.release_type == 'prod' {{ '}}' }}
+      run: |
+        bump2version patch
+        
+    - name: Bump version (Beta)
+      if: ${{ '{{' }} github.event.inputs.release_type == 'beta' {{ '}}' }}
+      run: |
+        current_version=$(grep -o 'current_version = "[^"]*' .bumpversion.cfg | cut -d'"' -f2)
+        bump2version patch --new-version "${current_version}.beta"
+        
+    - name: Build package
+      run: |
+        python -m build
+        
+    - name: Create release directory
+      run: |
+        mkdir -p dist/${{ '{{' }} github.event.inputs.release_type {{ '}}' }}
+        cp dist/*.whl dist/${{ '{{' }} github.event.inputs.release_type {{ '}}' }}/
+        cp dist/*.tar.gz dist/${{ '{{' }} github.event.inputs.release_type {{ '}}' }}/
+        
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: release-${{ '{{' }} github.event.inputs.release_type {{ '}}' }}
+        path: dist/${{ '{{' }} github.event.inputs.release_type {{ '}}' }}/*
