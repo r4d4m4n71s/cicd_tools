@@ -9,6 +9,7 @@ import shutil
 import subprocess
 from pathlib import Path
 from typing import Dict, Any, Optional, List
+from datetime import datetime
 
 import yaml
 
@@ -166,8 +167,11 @@ class TemplateManager:
         template_path = self.templates_dir / template_name
         defaults = self._get_template_defaults(template_path)
         
-        # Merge defaults with provided variables
-        return {**defaults, **variables}
+        # Add current year for templates
+        current_year = datetime.now().year
+        
+        # Merge defaults with provided variables and add current_year
+        return {**defaults, **variables, "current_year": current_year}
         
     def _get_template_defaults(self, template_path: Path) -> Dict[str, Any]:
         """

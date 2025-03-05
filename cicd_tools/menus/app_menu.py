@@ -136,7 +136,7 @@ class AppMenu:
                 config_manager.set("environment", {"type": "current"})
             else:
                 # Create new virtual environment
-                env_name = ask_for_input("Enter environment name:", project.project_path.name)
+                env_name = ask_for_input("Enter environment name:", ".venv")
                 project.configure_environment("virtual", env_name)
                 config_manager.set("environment", {"type": "virtual", "name": env_name})
                 

@@ -121,7 +121,7 @@ def confirm_action(message: str) -> bool:
     return questionary.confirm(message).ask()
 
 
-def ask_for_input(message: str, default: Optional[str] = None) -> str:
+def ask_for_input(message: str, default: Optional[Any] = None) -> str:
     """
     Ask the user for input.
     
@@ -132,6 +132,12 @@ def ask_for_input(message: str, default: Optional[str] = None) -> str:
     Returns:
         The user input
     """
+    # Ensure default is a string (never None)
+    if default is None:
+        default = ""
+    elif not isinstance(default, str):
+        default = str(default)
+    
     return questionary.text(message, default=default).ask()
 
 
@@ -146,4 +152,18 @@ def ask_for_selection(message: str, choices: List[Union[str, Dict[str, Any]]]) -
     Returns:
         The selected choice
     """
+    # # Ensure all choices are properly formatted
+    # formatted_choices = []
+    # for choice in choices:
+    #     if isinstance(choice, str):
+    #         formatted_choices.append(choice)
+    #     elif isinstance(choice, dict) and "value" in choice and "title" in choice:
+    #         formatted_choices.append(choice)
+    #     elif isinstance(choice, dict) and "name" in choice:
+    #         # Convert to string if it's a dict with a name but not in the expected format
+    #         formatted_choices.append(str(choice["name"]))
+    #     else:
+    #         # Convert to string for any other type
+    #         formatted_choices.append(str(choice))
+    
     return questionary.select(message, choices=choices).ask()
