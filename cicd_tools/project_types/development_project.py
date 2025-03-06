@@ -83,7 +83,8 @@ class DevelopmentProject(BaseProject):
         """
         try:
             env_manager = self.get_env_manager()
-            env_manager.run("pip", "install", "-e", ".[dev]")
+            env_manager.run("pip", "install", "-e", ".[dev]", capture_output = False)
+            print("Successfully installed.")            
             return True
         except Exception as e:
             print(f"Installation failed: {e}")
@@ -110,12 +111,13 @@ class DevelopmentProject(BaseProject):
             env_manager = self.get_env_manager()
             
             if test_option == "All tests":
-                env_manager.run("pytest", "--tb=short", "-v")
+                env_manager.run("pytest", "--tb=short", "-v", capture_output = False)
             elif test_option == "Failed tests only":
-                env_manager.run("pytest", "--tb=short", "-v", "--last-failed")
+                env_manager.run("pytest", "--tb=short", "-v", "--last-failed", capture_output = False)
             elif test_option == "With coverage":
-                env_manager.run("pytest", "--tb=short", "-v", "--cov")
-                
+                env_manager.run("pytest", "--tb=short", "-v", "--cov", capture_output = False)
+            
+            print("Test finished.")     
             return True
         except Exception as e:
             print(f"Tests failed: {e}")
@@ -183,11 +185,11 @@ class DevelopmentProject(BaseProject):
             
             # Bump version
             if release_type == "prod":
-                env_manager.run("bump2version", "patch")
+                env_manager.run("bump2version", "patch", capture_output = False)
             else:
                 # Get current version
                 current_version = self._get_current_version()
-                env_manager.run("bump2version", "patch", "--new-version", f"{current_version}.beta")
+                env_manager.run("bump2version", "patch", "--new-version", f"{current_version}.beta", capture_output = False)
                 
             # Build the project
             env_manager.run("python", "-m", "build")
@@ -258,16 +260,25 @@ class DevelopmentProject(BaseProject):
             # Remove build directory
             build_dir = self.project_path / "build"
             if build_dir.exists():
+                import shutil
                 shutil.rmtree(build_dir)
+                if build_dir.exists():
+                   print("Unable to delete build folder.") 
                 
             # Remove dist directory
             dist_dir = self.project_path / "dist"
             if dist_dir.exists():
+                import shutil
                 shutil.rmtree(dist_dir)
+                if dist_dir.exists():
+                   print("Unable to delete dist folder.") 
                 
             # Remove egg-info directory
             for egg_info_dir in self.project_path.glob("*.egg-info"):
+                import shutil
                 shutil.rmtree(egg_info_dir)
+                if egg_info_dir.exists():
+                   print("Unable to delete egg-info folder.") 
                 
             print("Build artifacts cleaned successfully")
             return True
@@ -286,7 +297,7 @@ class DevelopmentProject(BaseProject):
         
         try:
             # Check if the package is installed
-            env_manager.run("pip", "show", package, capture_output=True)
+            env_manager.run("pip", "show", package)
         except Exception:
             # Package is not installed, install it
             env_manager.install_pkg(package)
@@ -299,7 +310,7 @@ class DevelopmentProject(BaseProject):
             
             # Check if git user name is configured
             try:
-                env_manager.run("git", "config", "user.name", capture_output=True)
+                env_manager.run("git", "config", "user.name", capture_output=False)
             except Exception:
                 # Configure git user name
                 name = questionary.text("Enter git user name:").ask()
@@ -307,7 +318,7 @@ class DevelopmentProject(BaseProject):
                 
             # Check if git user email is configured
             try:
-                env_manager.run("git", "config", "user.email", capture_output=True)
+                env_manager.run("git", "config", "user.email", capture_output=False)
             except Exception:
                 # Configure git user email
                 email = questionary.text("Enter git user email:").ask()

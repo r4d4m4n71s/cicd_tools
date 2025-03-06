@@ -37,9 +37,8 @@ class BaseProject(ABC):
             An environment manager instance
         """
         if self._env_manager is None:
-            # Initialize environment manager
-            # This will be implemented when we adapt the env_manager module
-            pass
+            # Initialize environment manager with the project path
+            self._env_manager = EnvManager(self.project_path)
         return self._env_manager
         
     @abstractmethod
@@ -59,8 +58,13 @@ class BaseProject(ABC):
         Returns:
             A dictionary with environment configuration
         """
-        # This will be implemented when we adapt the env_manager module
-        return {}
+        env_manager = self.get_env_manager()
+        return {
+            "name": env_manager.env.name,
+            "root": str(env_manager.env.root),
+            "is_virtual": env_manager.env.is_virtual,
+            "python": str(env_manager.env.python)
+        }
         
     def configure_environment(self, env_type: str, env_name: Optional[str] = None) -> None:
         """
@@ -70,5 +74,15 @@ class BaseProject(ABC):
             env_type: Type of environment ('current' or 'virtual')
             env_name: Name of the virtual environment (if env_type is 'virtual')
         """
-        # This will be implemented when we adapt the env_manager module
-        pass
+        if env_type == 'current':
+            # Use the current Python environment
+            self._env_manager = EnvManager()
+        elif env_type == 'virtual':
+            # Use a virtual environment
+            if env_name:
+                venv_path = self.project_path / env_name
+            else:
+                venv_path = self.project_path / '.venv'
+            
+            # Create the virtual environment if it doesn't exist
+            self._env_manager = EnvManager(venv_path, clear=False)

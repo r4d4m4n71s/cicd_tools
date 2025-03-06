@@ -1,5 +1,8 @@
 """
 Tests for the Environment and EnvManager classes.
+
+These tests verify the functionality of the Environment and EnvManager classes
+which are now using the python-env-manager library.
 """
 
 import os
@@ -17,7 +20,8 @@ def test_environment_init():
     # Test with current environment
     env = Environment()
     
-    assert env.root == os.path.abspath(sys.prefix)
+    # Use case-insensitive comparison for Windows paths
+    assert env.root.lower() == os.path.abspath(sys.prefix).lower()
     assert env.name == os.path.basename(env.root)
     assert os.path.exists(env.python)
     
@@ -25,20 +29,9 @@ def test_environment_init():
     with tempfile.TemporaryDirectory() as temp_dir:
         env = Environment(temp_dir)
         
-        assert env.root == os.path.abspath(temp_dir)
+        # Use case-insensitive comparison for Windows paths
+        assert env.root.lower() == os.path.abspath(temp_dir).lower()
         assert env.name == os.path.basename(temp_dir)
-
-@pytest.mark.skip(reason="This test only would pass if the current environment is local")
-def test_environment_is_local():
-    """Test Environment._is_local method."""
-    env = Environment()
-    
-    # Test with Python installation directory
-    assert env._is_local(sys.prefix)
-    
-    # Test with temporary directory (should not be a local Python installation)
-    with tempfile.TemporaryDirectory() as temp_dir:
-        assert not env._is_local(temp_dir)
 
 
 def test_env_manager_init():
@@ -46,14 +39,16 @@ def test_env_manager_init():
     # Test with current environment
     env_manager = EnvManager()
     
-    assert env_manager.env.root == os.path.abspath(sys.prefix)
+    # Use case-insensitive comparison for Windows paths
+    assert env_manager.env.root.lower() == os.path.abspath(sys.prefix).lower()
     assert env_manager.env.name == os.path.basename(env_manager.env.root)
     
     # Test with custom path
     with tempfile.TemporaryDirectory() as temp_dir:
         env_manager = EnvManager(temp_dir)
         
-        assert env_manager.env.root == os.path.abspath(temp_dir)
+        # Use case-insensitive comparison for Windows paths
+        assert env_manager.env.root.lower() == os.path.abspath(temp_dir).lower()
         assert env_manager.env.name == os.path.basename(temp_dir)
 
 

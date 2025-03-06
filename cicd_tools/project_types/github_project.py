@@ -89,7 +89,8 @@ class GitHubProject(BaseProject):
         """
         try:
             env_manager = self.get_env_manager()
-            env_manager.run("pip", "install", "-e", ".[dev]")
+            env_manager.run("pip", "install", "-e", ".[dev]", capture_output = False)
+            print("Successfully installed.")
             return True
         except Exception as e:
             print(f"Installation failed: {e}")
@@ -116,12 +117,13 @@ class GitHubProject(BaseProject):
             env_manager = self.get_env_manager()
             
             if test_option == "All tests":
-                env_manager.run("pytest", "--tb=short", "-v")
+                env_manager.run("pytest", "--tb=short", "-v", capture_output = False)
             elif test_option == "Failed tests only":
-                env_manager.run("pytest", "--tb=short", "-v", "--last-failed")
+                env_manager.run("pytest", "--tb=short", "-v", "--last-failed", capture_output = False)
             elif test_option == "With coverage":
-                env_manager.run("pytest", "--tb=short", "-v", "--cov")
-                
+                env_manager.run("pytest", "--tb=short", "-v", "--cov", capture_output = False)
+            
+            print("Test finished.")   
             return True
         except Exception as e:
             print(f"Tests failed: {e}")
@@ -278,19 +280,28 @@ class GitHubProject(BaseProject):
             True if cleaning was successful, False otherwise
         """
         try:
-            # Remove build directory
+             # Remove build directory
             build_dir = self.project_path / "build"
             if build_dir.exists():
+                import shutil
                 shutil.rmtree(build_dir)
+                if build_dir.exists():
+                   print("Unable to delete build folder.") 
                 
             # Remove dist directory
             dist_dir = self.project_path / "dist"
             if dist_dir.exists():
+                import shutil
                 shutil.rmtree(dist_dir)
+                if dist_dir.exists():
+                   print("Unable to delete dist folder.") 
                 
             # Remove egg-info directory
             for egg_info_dir in self.project_path.glob("*.egg-info"):
+                import shutil
                 shutil.rmtree(egg_info_dir)
+                if egg_info_dir.exists():
+                   print("Unable to delete egg-info folder.") 
                 
             print("Build artifacts cleaned successfully")
             return True

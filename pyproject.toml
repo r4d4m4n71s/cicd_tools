@@ -30,6 +30,7 @@ dependencies = [
     "copier>=7.0.0",
     "pyyaml>=6.0",
     "click>=8.0.0",
+    "python-env-manager>=0.1.0",
 ]
 
 [project.optional-dependencies]

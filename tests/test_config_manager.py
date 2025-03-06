@@ -101,4 +101,4 @@ def test_config_manager_get_project_config():
         project_path = Path(temp_dir)
         config_manager = ConfigManager.get_project_config(project_path)
         
-        assert config_manager.config_path == project_path / ".cicd_tools" / "config.yaml"
+        assert config_manager.config_path == project_path / '.cicd_tools_cache/config.yaml'

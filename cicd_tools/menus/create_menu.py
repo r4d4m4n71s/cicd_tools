@@ -90,15 +90,18 @@ class CreateMenu:
         if not project_name:
             return
             
+        # Replace spaces with underscores in project name
+        project_name_safe = project_name.replace(" ", "_")
+            
         # Get project directory
-        project_dir = directory / project_name
+        project_dir = directory / project_name_safe
         
         if project_dir.exists():
             if not confirm_action(f"Project directory {project_dir} already exists. Overwrite?"):
                 return
                 
         # Get template variables
-        variables = {"project_name": project_name}
+        variables = {"project_name": project_name_safe}
         
         for var_name, var_info in template_info["variables"].items():
             if var_name == "project_name":

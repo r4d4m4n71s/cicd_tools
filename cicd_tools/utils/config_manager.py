@@ -10,8 +10,10 @@ from typing import Dict, Any, Optional, Union
 
 import yaml
 
+CICD_TOOLS_CACHE_FILE = '.cicd_tools_cache/config.yaml'
 
 class ConfigManager:
+    
     """
     Manages project configuration using YAML storage.
     
@@ -119,5 +121,5 @@ class ConfigManager:
         Returns:
             A configuration manager for the project
         """
-        config_path = project_path / '.cicd_tools' / 'config.yaml'
+        config_path = project_path / CICD_TOOLS_CACHE_FILE
         return ConfigManager(config_path)

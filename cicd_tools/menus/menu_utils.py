@@ -95,18 +95,34 @@ class Menu:
         
         # Add a back/exit option
         choices.append(Choice(title="Back/Exit", value=None))
-        
         result = questionary.select(
             f"{self.title} - Select an action:",
             choices=choices
         ).ask()
         
-        if result is None:
+        # Handle Back/Exit option
+        if result is None or result == "Back/Exit":
             return None
+        
+        # # Convert result to integer if it's a string that represents an integer
+        # if isinstance(result, str) and result.isdigit():
+        #     result = int(result)
+        
+        # # If result is still a string, try to find the corresponding action
+        # if isinstance(result, str):
+        #     # Try to find the action by name
+        #     for i, action in enumerate(self.actions):
+        #         action_title = f"{action.name} - {action.description}"
+        #         if result == action_title or result == action.name:
+        #             result = i
+        #             break
+        #     else:
+        #         # If we get here, we couldn't find a matching action
+        #         # This is a fallback to prevent errors
+        #         return None
             
         selected_action = self.actions[result]
         return selected_action.execute()
-
 
 def confirm_action(message: str) -> bool:
     """
@@ -132,7 +148,7 @@ def ask_for_input(message: str, default: Optional[Any] = None) -> str:
     Returns:
         The user input
     """
-    # Ensure default is a string (never None)
+    # Convert non-string defaults to string, or empty string if None
     if default is None:
         default = ""
     elif not isinstance(default, str):

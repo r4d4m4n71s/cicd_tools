@@ -68,7 +68,8 @@ class SimpleProject(BaseProject):
         """
         try:
             env_manager = self.get_env_manager()
-            env_manager.run("pip", "install", "-e", ".")
+            env_manager.run("pip", "install", "-e", ".", capture_output = False)
+            print("Successfully installed.")
             return True
         except Exception as e:
             print(f"Installation failed: {e}")
@@ -83,7 +84,8 @@ class SimpleProject(BaseProject):
         """
         try:
             env_manager = self.get_env_manager()
-            env_manager.run("python", "-m", "unittest", "discover")
+            env_manager.run("python", "-m", "unittest", "discover", capture_output = False)
+            print("Test finished.")
             return True
         except Exception as e:
             print(f"Tests failed: {e}")
@@ -98,7 +100,8 @@ class SimpleProject(BaseProject):
         """
         try:
             env_manager = self.get_env_manager()
-            env_manager.run("python", "setup.py", "build")
+            env_manager.run("python", "setup.py", "build", capture_output = False)
+            print("Build finished.")            
             return True
         except Exception as e:
             print(f"Build failed: {e}")
@@ -117,17 +120,23 @@ class SimpleProject(BaseProject):
             if build_dir.exists():
                 import shutil
                 shutil.rmtree(build_dir)
+                if build_dir.exists():
+                   print("Unable to delete build folder.") 
                 
             # Remove dist directory
             dist_dir = self.project_path / "dist"
             if dist_dir.exists():
                 import shutil
                 shutil.rmtree(dist_dir)
+                if dist_dir.exists():
+                   print("Unable to delete dist folder.") 
                 
             # Remove egg-info directory
             for egg_info_dir in self.project_path.glob("*.egg-info"):
                 import shutil
                 shutil.rmtree(egg_info_dir)
+                if egg_info_dir.exists():
+                   print("Unable to delete egg-info folder.") 
                 
             return True
         except Exception as e:

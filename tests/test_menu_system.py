@@ -148,7 +148,7 @@ def test_ask_for_input(mock_text):
     result = ask_for_input("Enter input:")
     
     assert result == "Input"
-    mock_text.assert_called_once_with("Enter input:", default=None)
+    mock_text.assert_called_once_with("Enter input:", default="")
     
     # Mock with default value
     mock_text.reset_mock()
