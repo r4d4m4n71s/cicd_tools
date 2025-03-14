@@ -94,6 +94,9 @@ class TemplateManager:
                 "variables": processed_vars
             })
             
+            # Set up example module and default configuration
+            self._setup_example_module(destination, template_name)
+            
         except Exception as e:
             raise RuntimeError(f"Failed to create project: {e}") from e
             
@@ -144,6 +147,9 @@ class TemplateManager:
                 "version": self._get_template_version(template_path),
                 "variables": processed_vars
             })
+            
+            # Set up example module and default configuration
+            self._setup_example_module(project_dir, template_name)
             
         except Exception as e:
             raise RuntimeError(f"Failed to update project: {e}") from e
@@ -227,6 +233,56 @@ class TemplateManager:
             
         return config.get("_version", "0.1.0")
         
+    def _setup_example_module(self, destination: Path, template_name: str) -> None:
+        """
+        Set up the example module in the created project.
+        
+        Args:
+            destination: Path to the project directory
+            template_name: Name of the template used
+        """
+        try:
+            # Ensure the .app_cache directory exists
+            app_cache_dir = destination / '.app_cache'
+            app_cache_dir.mkdir(parents=True, exist_ok=True)
+            
+            # Set up default configuration if it doesn't exist
+            config_path = app_cache_dir / 'config.yaml'
+            if not config_path.exists():
+                # Get the config manager
+                config_manager = ConfigManager(config_path)
+                
+                # Set up default configuration
+                config_manager.setup_default_config()
+                
+                # Add project-specific settings
+                project_name = destination.name
+                config_manager.set("logging", {
+                    "default": {
+                        "level": "INFO",
+                        "handlers": [
+                            {
+                                "type": "console",
+                                "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+                            },
+                            {
+                                "type": "file",
+                                "filename": f"logs/{project_name.replace('-', '_')}.log",
+                                "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+                                "max_bytes": 10485760,
+                                "backup_count": 3
+                            }
+                        ]
+                    }
+                })
+                
+                # Ensure capture_output is enabled by default
+                config_manager.set("environment", {"capture_output": True})
+                
+                print(f"Set up default configuration in {config_path}")
+        except Exception as e:
+            print(f"Warning: Failed to set up example module configuration: {e}")
+    
     def _run_copier(
         self,
         command: str,

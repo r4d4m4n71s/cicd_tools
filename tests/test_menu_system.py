@@ -15,11 +15,12 @@ from cicd_tools.menus.menu_utils import Menu, MenuAction, confirm_action, ask_fo
 def test_menu_action_init():
     """Test MenuAction initialization."""
     callback = MagicMock(return_value=True)
-    action = MenuAction("Test Action", "Test description", callback, arg1="value1")
+    action = MenuAction("Test Action", "Test description", callback, icon="🔧", arg1="value1")
     
     assert action.name == "Test Action"
     assert action.description == "Test description"
     assert action.callback == callback
+    assert action.icon == "🔧"
     assert action.kwargs == {"arg1": "value1"}
 
 
@@ -50,6 +51,18 @@ def test_menu_init():
     
     assert menu.title == "Test Menu"
     assert menu.actions == []
+    assert menu.style_config == {}
+    
+    # Test with style_config
+    style_config = {
+        "colors": {
+            "primary": "#007BFF"
+        }
+    }
+    menu_with_style = Menu("Test Menu", style_config)
+    
+    assert menu_with_style.title == "Test Menu"
+    assert menu_with_style.style_config == style_config
 
 
 def test_menu_add_action():

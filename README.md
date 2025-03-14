@@ -14,11 +14,14 @@
 
 ## ✨ Features
 
-- 🔄 **Dynamic Menus** - Adapt based on project type
+- 🔄 **Dynamic Menus** - Adapt based on project type with enhanced visual styling and icons
 - 📋 **Template-based** - Project creation and updates using Copier
 - 🧩 **Multiple Project Types** - Different capabilities for different needs
 - 🔗 **GitHub Integration** - Workflows for CI/CD
 - 🛠️ **Environment Management** - Comprehensive virtual environment handling
+- 📊 **Progress Tracking** - Visual feedback for long-running operations (enabled by default)
+- 📝 **Example Modules** - Ready-to-use sample modules with logging capabilities
+- ⚙️ **Centralized Configuration** - Flexible configuration via .app_cache/config.yaml
 
 ---
 
@@ -85,6 +88,11 @@ cicd_tools create
    ```
    Project created successfully at /path/to/my-project
    ```
+
+6. The created project includes:
+   - Basic project structure
+   - Example module with logging capabilities
+   - Configuration file in .app_cache/config.yaml
 </details>
 
 ### 🔧 Working with an Existing Project
@@ -108,18 +116,18 @@ cicd_tools app
    cicd_tools app
    ```
 
-3. The tool will detect your project type and display appropriate options:
+3. The tool will detect your project type and display appropriate options with enhanced styling:
    ```
    App Menu - my-project
    
    ? Select an action: (Use arrow keys)
-    > Manage Environment - Manage the project environment
-      Install - Install the project
-      Test - Run tests
-      Build - Build the project
-      Clean - Clean build artifacts
-      Help - Show help for project operations
-      Back/Exit
+    > 🔧 Manage Environment - Manage the project environment
+      📥 Install - Install the project
+      🧪 Test - Run tests
+      🏗️ Build - Build the project
+      🧹 Clean - Clean build artifacts
+      ℹ️ Help - Show help for project operations
+      ↩️ Back/Exit
    ```
 
 4. Select an action to perform.
@@ -134,7 +142,7 @@ CICD Tools provides comprehensive environment management capabilities.
 
 1. From the app menu, select "Manage Environment":
    ```
-   ? Select an action: Manage Environment - Manage the project environment
+   ? Select an action: 🔧 Manage Environment - Manage the project environment
    ```
 
 2. Choose an environment management action:
@@ -142,10 +150,10 @@ CICD Tools provides comprehensive environment management capabilities.
    Environment Management
    
    ? Select an action: (Use arrow keys)
-    > Recreate Environment - Recreate the virtual environment
-      Delete Environment - Delete the virtual environment
-      Create New Environment - Create a new virtual environment
-      Back/Exit
+    > 🔄 Recreate Environment - Recreate the virtual environment
+      🗑️ Delete Environment - Delete the virtual environment
+      ➕ Create New Environment - Create a new virtual environment
+      ↩️ Back/Exit
    ```
 
 3. If creating a new environment, enter a name:
@@ -153,10 +161,79 @@ CICD Tools provides comprehensive environment management capabilities.
    ? Enter environment name: my-env
    ```
 
-4. The environment will be created and the project will be installed:
+4. The environment will be created and the project will be installed with visual progress tracking:
    ```
+   Creating environment... [========================================] 100%
+   Installing dependencies... [====================================] 100%
    Environment created successfully
    ```
+</details>
+
+### ⚙️ Configuration System
+
+CICD Tools uses a centralized configuration system located in `.app_cache/config.yaml`.
+
+<details>
+<summary><b>Configuration Options</b></summary>
+
+- **Environment Settings**
+  ```yaml
+  environment:
+    capture_output: true  # Enable progress bars for long-running operations (default: true)
+  ```
+
+- **Logging Configuration**
+  ```yaml
+  logging:
+    default:
+      level: INFO
+      handlers:
+        - type: console
+          format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        - type: file
+          filename: "app.log"
+          format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+          max_bytes: 10485760  # 10MB
+          backup_count: 3
+  ```
+
+- **Menu Styling**
+  ```yaml
+  styling:
+    colors:
+      primary: "#007BFF"
+      secondary: "#6C757D"
+      success: "#28A745"
+      warning: "#FFC107"
+      error: "#DC3545"
+  ```
+
+You can customize these settings to match your preferences and requirements.
+</details>
+
+### 📝 Example Module
+
+Each project template includes a ready-to-use sample module with logging capabilities.
+
+<details>
+<summary><b>Using the Example Module</b></summary>
+
+The example module is located in your project structure and includes:
+
+- `__init__.py` - Module initialization with logger setup
+- `main.py` - Example functionality with proper logging
+
+Example usage:
+
+```python
+from my_project.sample_module import main
+
+# Call a function from the example module
+result = main.process_data([1, 2, 3])
+print(result)
+```
+
+The example module automatically sets up logging based on your configuration in `.app_cache/config.yaml`.
 </details>
 
 ---
@@ -281,21 +358,35 @@ CICD Tools uses Copier for template-based project creation and updates.
 <details>
 <summary><b>🔹 Simple Project</b></summary>
 
-- **Features**: Basic project structure, setup.py, tests
+- **Features**: 
+  - Basic project structure
+  - setup.py
+  - Tests
+  - Sample module with logging
+  - Configuration in .app_cache/config.yaml
 - **Use case**: Simple utility libraries, scripts
 </details>
 
 <details>
 <summary><b>🔹 Development Project</b></summary>
 
-- **Features**: pyproject.toml, pre-commit hooks, GitHub Actions workflows
+- **Features**: 
+  - pyproject.toml
+  - Pre-commit hooks
+  - GitHub Actions workflows
+  - Sample module with logging
+  - Configuration in .app_cache/config.yaml
 - **Use case**: Libraries with CI/CD requirements, packages for distribution
 </details>
 
 <details>
 <summary><b>🔹 GitHub Project</b></summary>
 
-- **Features**: GitHub-specific files (issue templates, PR templates), GitHub Actions
+- **Features**: 
+  - GitHub-specific files (issue templates, PR templates)
+  - GitHub Actions
+  - Sample module with logging
+  - Configuration in .app_cache/config.yaml
 - **Use case**: Open source projects hosted on GitHub
 </details>
 
@@ -307,6 +398,8 @@ CICD Tools uses Copier for template-based project creation and updates.
 1. Create a directory for your template in the `project_templates` directory.
 2. Create a `copier.yaml` file with template configuration.
 3. Add template files with `.jinja` extension for templating.
+4. Include a sample module with logging capabilities.
+5. Add a default configuration file template.
 
 Example `copier.yaml`:
 ```yaml

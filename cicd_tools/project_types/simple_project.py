@@ -9,7 +9,6 @@ from pathlib import Path
 from typing import Dict, List, Any, Optional
 
 from cicd_tools.project_types.base_project import BaseProject
-from cicd_tools.utils.env_manager import EnvManager
 
 
 class SimpleProject(BaseProject):
@@ -40,22 +39,26 @@ class SimpleProject(BaseProject):
             {
                 "name": "Install",
                 "description": "Install the project",
-                "callback": self.install
+                "callback": self.install,
+                "icon": "📥"
             },
             {
                 "name": "Test",
                 "description": "Run tests",
-                "callback": self.test
+                "callback": self.test,
+                "icon": "🧪"
             },
             {
                 "name": "Build",
                 "description": "Build the project",
-                "callback": self.build
+                "callback": self.build,
+                "icon": "🏗️"
             },
             {
                 "name": "Clean",
                 "description": "Clean build artifacts",
-                "callback": self.clean
+                "callback": self.clean,
+                "icon": "🧹"
             }
         ]
         
@@ -67,8 +70,8 @@ class SimpleProject(BaseProject):
             True if installation was successful, False otherwise
         """
         try:
-            env_manager = self.get_env_manager()
-            env_manager.run("pip", "install", "-e", ".", capture_output = False)
+            # Use run_with_progress instead of direct env_manager.run
+            self.run("pip", "install", "-e", ".")
             print("Successfully installed.")
             return True
         except Exception as e:
@@ -83,8 +86,8 @@ class SimpleProject(BaseProject):
             True if tests passed, False otherwise
         """
         try:
-            env_manager = self.get_env_manager()
-            env_manager.run("python", "-m", "unittest", "discover", capture_output = False)
+            # Use run_with_progress instead of direct env_manager.run
+            self.run("python", "-m", "unittest", "discover")
             print("Test finished.")
             return True
         except Exception as e:
@@ -99,9 +102,9 @@ class SimpleProject(BaseProject):
             True if build was successful, False otherwise
         """
         try:
-            env_manager = self.get_env_manager()
-            env_manager.run("python", "setup.py", "build", capture_output = False)
-            print("Build finished.")            
+            # Use run_with_progress instead of direct env_manager.run
+            self.run("python", "setup.py", "build")
+            print("Build finished.")
             return True
         except Exception as e:
             print(f"Build failed: {e}")

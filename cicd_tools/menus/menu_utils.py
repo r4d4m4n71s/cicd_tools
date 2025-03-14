@@ -1,23 +1,56 @@
 """
 Menu utilities for CICD Tools.
 
-This module provides common menu functionality for CICD Tools.
+This module provides common menu functionality for CICD Tools with enhanced styling.
 """
 
 from typing import List, Callable, Dict, Any, Optional, Union
 
 import questionary
 from questionary import Choice
+from rich.console import Console
+from rich.panel import Panel
+from rich.text import Text
+from rich.style import Style
 
+# Initialize Rich console
+console = Console()
+
+def style_text(text: str, style_str: str) -> Text:
+    """
+    Apply style to text using Rich.
+    
+    Args:
+        text: Text to style
+        style_str: Style string (e.g., 'bold blue')
+        
+    Returns:
+        Styled Text object
+    """
+    return Text(text, style=style_str)
+
+def display_header(title: str, subtitle: Optional[str] = None) -> None:
+    """
+    Display a styled header.
+    
+    Args:
+        title: Title text
+        subtitle: Optional subtitle text
+    """
+    console.print(Panel(
+        Text(title, style="bold blue"),
+        subtitle=subtitle,
+        border_style="blue"
+    ))
 
 class MenuAction:
     """
     Represents a single menu action/option.
     
-    This class encapsulates a menu action with a name, description, and callback function.
+    This class encapsulates a menu action with a name, description, icon, and callback function.
     """
     
-    def __init__(self, name: str, description: str, callback: Callable, **kwargs):
+    def __init__(self, name: str, description: str, callback: Callable, icon: Optional[str] = None, **kwargs):
         """
         Initialize a menu action.
         
@@ -25,11 +58,13 @@ class MenuAction:
             name: Name of the action (displayed in the menu)
             description: Description of the action
             callback: Function to call when the action is selected
+            icon: Optional icon to display next to the action (emoji or symbol)
             **kwargs: Additional arguments to pass to the callback
         """
         self.name = name
         self.description = description
         self.callback = callback
+        self.icon = icon
         self.kwargs = kwargs
         
     def execute(self, *args, **kwargs) -> Any:
@@ -52,18 +87,21 @@ class Menu:
     """
     Base menu class to display options and handle selection.
     
-    This class provides functionality to display a menu and handle user selection.
+    This class provides functionality to display a menu and handle user selection
+    with enhanced styling.
     """
     
-    def __init__(self, title: str):
+    def __init__(self, title: str, style_config: Optional[Dict[str, Any]] = None):
         """
         Initialize a menu.
         
         Args:
             title: Title of the menu
+            style_config: Optional styling configuration
         """
         self.title = title
         self.actions: List[MenuAction] = []
+        self.style_config = style_config or {}
         
     def add_action(self, action: MenuAction) -> None:
         """
@@ -82,21 +120,27 @@ class Menu:
             The result of the selected action, or None if no action was selected
         """
         if not self.actions:
-            print(f"No actions available for {self.title}")
+            console.print(f"[bold red]No actions available for {self.title}[/bold red]")
             return None
             
-        choices = [
-            Choice(
-                title=f"{action.name} - {action.description}",
+        # Display styled header
+        display_header(self.title, "Select an action:")
+        
+        # Create choices with icons
+        choices = []
+        for i, action in enumerate(self.actions):
+            icon_text = f"{action.icon} " if action.icon else ""
+            choices.append(Choice(
+                title=f"{icon_text}{action.name} - {action.description}",
                 value=i
-            )
-            for i, action in enumerate(self.actions)
-        ]
+            ))
         
         # Add a back/exit option
-        choices.append(Choice(title="Back/Exit", value=None))
+        choices.append(Choice(title="↩️ Back/Exit", value=None))
+        
+        # Show menu and get selection
         result = questionary.select(
-            f"{self.title} - Select an action:",
+            "Select an action:",
             choices=choices
         ).ask()
         

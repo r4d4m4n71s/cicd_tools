@@ -1,19 +1,19 @@
 """
-Tests for the main module.
+Tests for the sample module.
 """
 
 import unittest
 
-from {{ project_name.replace('-', '_') }}.main import hello
+from sample_module.main import process_data
 
 
-class TestMain(unittest.TestCase):
-    """Tests for the main module."""
+class TestSampleModule(unittest.TestCase):
+    """Tests for the sample module."""
     
-    def test_hello(self):
-        """Test the hello function."""
-        self.assertEqual(hello(), "Hello, World!")
-        self.assertEqual(hello("Test"), "Hello, Test!")
+    def test_process_data(self):
+        """Test the process_data function."""
+        self.assertEqual(process_data([1, 2, 3, 4, 5]), 15)
+        self.assertEqual(process_data([10, 20]), 30)
 
 
 if __name__ == "__main__":

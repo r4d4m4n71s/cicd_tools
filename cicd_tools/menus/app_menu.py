@@ -1,7 +1,7 @@
 """
 App menu for CICD Tools.
 
-This module provides the AppMenu class for project-specific operations.
+This module provides the AppMenu class for project-specific operations with enhanced styling.
 """
 
 import os
@@ -12,13 +12,13 @@ import questionary
 from questionary import Choice
 
 from cicd_tools.menus.menu_utils import Menu, MenuAction, confirm_action, ask_for_input, ask_for_selection
+from cicd_tools.menus.menu_utils import display_header, style_text
 from cicd_tools.project_types.base_project import BaseProject
 from cicd_tools.project_types.simple_project import SimpleProject
 from cicd_tools.project_types.development_project import DevelopmentProject
 from cicd_tools.project_types.github_project import GitHubProject
 from cicd_tools.templates.template_utils import detect_template_type
 from cicd_tools.utils.config_manager import ConfigManager
-from cicd_tools.utils.env_manager import EnvManager
 
 
 class AppMenu:
@@ -52,30 +52,37 @@ class AppMenu:
         # Check environment configuration
         self._check_environment_config(project)
         
-        # Create menu
-        menu = Menu(f"App Menu - {project_dir.name}")
+        # Get styling configuration
+        config_manager = ConfigManager.get_project_config(project_dir)
+        style_config = config_manager.get("styling", {})
         
-        # Add environment management action
+        # Create menu with styling
+        menu = Menu(f"App Menu - {project_dir.name}", style_config)
+        
+        # Add environment management action with icon
         menu.add_action(MenuAction(
             "Manage Environment",
             "Manage the project environment",
             self._manage_environment,
+            icon="🔧",
             project=project
         ))
         
-        # Add project-specific actions
+        # Add project-specific actions with icons
         for action in project.get_menus():
             menu.add_action(MenuAction(
                 action["name"],
                 action["description"],
-                action["callback"]
+                action["callback"],
+                icon=action.get("icon")
             ))
             
-        # Add help action
+        # Add help action with icon
         menu.add_action(MenuAction(
             "Help",
             "Show help for project operations",
             self._show_help,
+            icon="ℹ️",
             project=project
         ))
         
@@ -158,15 +165,19 @@ class AppMenu:
             print("No environment configured")
             return
             
-        # Create menu
-        menu = Menu("Environment Management")
+        # Get styling configuration
+        style_config = config_manager.get("styling", {})
+        
+        # Create menu with styling
+        menu = Menu("Environment Management", style_config)
         
         if env_config["type"] == "virtual":
-            # Add actions for virtual environment
+            # Add actions for virtual environment with icons
             menu.add_action(MenuAction(
                 "Recreate Environment",
                 "Recreate the virtual environment",
                 self._recreate_environment,
+                icon="🔄",
                 project=project,
                 config_manager=config_manager
             ))
@@ -175,6 +186,7 @@ class AppMenu:
                 "Delete Environment",
                 "Delete the virtual environment",
                 self._delete_environment,
+                icon="🗑️",
                 project=project,
                 config_manager=config_manager
             ))
@@ -183,6 +195,7 @@ class AppMenu:
             "Create New Environment",
             "Create a new virtual environment",
             self._create_environment,
+            icon="➕",
             project=project,
             config_manager=config_manager
         ))
@@ -288,33 +301,44 @@ class AppMenu:
         Args:
             project: Project instance
         """
+        from rich.console import Console
+        from rich.panel import Panel
+        from rich.table import Table
+        
+        console = Console()
         project_type = project.__class__.__name__
         
-        print(f"Help for {project_type}:")
-        print()
+        # Create a styled header
+        display_header(f"Help for {project_type}", "Available Operations")
+        
+        # Create a table for operations
+        table = Table(show_header=True, header_style="bold blue")
+        table.add_column("Operation", style="bold")
+        table.add_column("Description")
         
         if project_type == "SimpleProject":
-            print("Simple Project Operations:")
-            print("- Install: Install the project")
-            print("- Test: Run tests")
-            print("- Build: Build the project")
-            print("- Clean: Clean build artifacts")
+            table.add_row("📥 Install", "Install the project")
+            table.add_row("🧪 Test", "Run tests")
+            table.add_row("🏗️ Build", "Build the project")
+            table.add_row("🧹 Clean", "Clean build artifacts")
         elif project_type == "DevelopmentProject":
-            print("Development Project Operations:")
-            print("- Install: Install the project with development dependencies")
-            print("- Test: Run tests")
-            print("- Prehook: Configure pre-commit hooks")
-            print("- Release: Create a release")
-            print("- Deploy: Deploy the project")
-            print("- Clean: Clean build artifacts")
+            table.add_row("📥 Install", "Install the project with development dependencies")
+            table.add_row("🧪 Test", "Run tests")
+            table.add_row("🔄 Prehook", "Configure pre-commit hooks")
+            table.add_row("📦 Release", "Create a release")
+            table.add_row("🚀 Deploy", "Deploy the project")
+            table.add_row("🧹 Clean", "Clean build artifacts")
         elif project_type == "GitHubProject":
-            print("GitHub Project Operations:")
-            print("- Install: Install the project with development dependencies")
-            print("- Test: Run tests")
-            print("- Prehook: Configure pre-commit hooks")
-            print("- Clone Repository: Clone a GitHub repository")
-            print("- Pull Changes: Pull changes from the remote repository")
-            print("- Push Changes: Push changes to the remote repository")
-            print("- Clean: Clean build artifacts")
+            table.add_row("📥 Install", "Install the project with development dependencies")
+            table.add_row("🧪 Test", "Run tests")
+            table.add_row("🔄 Prehook", "Configure pre-commit hooks")
+            table.add_row("📋 Clone Repository", "Clone a GitHub repository")
+            table.add_row("⬇️ Pull Changes", "Pull changes from the remote repository")
+            table.add_row("⬆️ Push Changes", "Push changes to the remote repository")
+            table.add_row("🧹 Clean", "Clean build artifacts")
         else:
-            print("No help available for this project type")
+            console.print("[bold red]No help available for this project type[/bold red]")
+            return
+            
+        # Display the table
+        console.print(table)

@@ -6,9 +6,11 @@ This module provides the abstract base class for all project types.
 
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, Tuple, Union
 
-from cicd_tools.utils.env_manager import EnvManager
+# Import EnvManager directly from env_manager
+from env_manager import EnvManager, ProgressRunner
+from cicd_tools.utils.config_manager import ConfigManager
 
 
 class BaseProject(ABC):
@@ -40,6 +42,31 @@ class BaseProject(ABC):
             # Initialize environment manager with the project path
             self._env_manager = EnvManager(self.project_path)
         return self._env_manager
+        
+    def run(self, *cmd_args) -> str:
+        """
+        Run a command with progress tracking.
+        
+        Args:
+            *cmd_args: Command arguments
+            
+        Returns:
+            Command output
+        """
+        env_manager = self.get_env_manager()
+        config_manager = ConfigManager.get_project_config(self.project_path)
+        capture_output = config_manager.get("environment", {}).get("capture_output", True)
+        
+        if capture_output:
+            try:
+                # Set inline_output to 10 to show the last 10 lines of output during execution
+                return ProgressRunner(inline_output=1).with_env(env_manager).run(*cmd_args)
+            except ImportError:
+                # Fall back to regular run if progress_runner is not available
+                return env_manager.get_runner().run(*cmd_args)
+        else:
+            # Run directly without progress tracking
+            return env_manager.get_runner().run(*cmd_args)
         
     @abstractmethod
     def get_menus(self) -> List[Dict[str, Any]]:

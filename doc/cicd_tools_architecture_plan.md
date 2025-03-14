@@ -1,14 +1,16 @@
-# CICD Tools Project - Detailed Architecture Plan
+# CICD Tools Project - Updated Architecture Document
 
 ## 1. Project Overview
 
-The cicd_tools project will be a flexible framework for development tasks including project creation, testing, building, and deployment. It will feature:
+The cicd_tools project is a flexible framework for development tasks including project creation, testing, building, and deployment. It features:
 
-- Dynamic menus that adapt based on project type
+- Dynamic menus that adapt based on project type with enhanced look and feel
 - Template-based project creation and updates using Copier
 - Support for multiple project types with different capabilities
-- Integration with GitHub workflows for CI/CD
 - Comprehensive environment management
+- Project-specific configuration management
+- Example modules with built-in logging capabilities
+- Configurable logging via centralized configuration in .app_cache
 
 ## 2. Project Structure
 
@@ -36,12 +38,27 @@ cicd_tools/
 │   │   └── template_utils.py    # Template helpers
 │   └── utils/                   # Utility functions
 │       ├── __init__.py
-│       ├── env_manager.py       # Adapted from existing env_manager
+│       ├── env_manager.py       # Environment management adapter
 │       └── config_manager.py    # Project configuration
 ├── project_templates/           # Copier templates
 │   ├── simple_project/
+│   │   ├── sample_module/       # Example module template
+│   │   │   ├── __init__.py.jinja
+│   │   │   └── main.py.jinja
+│   │   ├── .app_cache/          # Configuration directory
+│   │   │   └── config.yaml.jinja
 │   ├── development_project/
+│   │   ├── sample_module/       # Example module template
+│   │   │   ├── __init__.py.jinja
+│   │   │   └── main.py.jinja
+│   │   ├── .app_cache/          # Configuration directory
+│   │   │   └── config.yaml.jinja
 │   └── github_project/
+│       ├── sample_module/       # Example module template
+│       │   ├── __init__.py.jinja
+│       │   └── main.py.jinja
+│       ├── .app_cache/          # Configuration directory
+│       │   └── config.yaml.jinja
 └── tests/                       # Test suite
     ├── __init__.py
     ├── conftest.py
@@ -56,6 +73,8 @@ cicd_tools/
 classDiagram
     class BaseProject {
         <<abstract>>
+        +project_path: Path
+        +_env_manager: EnvManager
         +__init__(project_path)
         +get_env_manager()
         +get_menus()*
@@ -64,26 +83,40 @@ classDiagram
     }
     
     class SimpleProject {
+        +__init__(project_path)
+        +get_menus()
         +install()
         +test() 
-        +get_menus()
+        +build()
+        +clean()
     }
     
     class DevelopmentProject {
+        +__init__(project_path)
+        +get_menus()
         +install()
         +test()
         +prehook(action)
         +release(type)
         +deploy(target)
-        +get_menus()
+        +clean()
+        -_install_if_needed(package)
+        -_configure_git_for_release()
+        -_get_current_version()
+        -_prepare_release_directory(release_type)
     }
     
     class GitHubProject {
+        +__init__(project_path)
+        +get_menus()
         +install()
         +test()
         +prehook(action)
         +clone_repo(url)
-        +get_menus()
+        +pull_changes()
+        +push_changes()
+        +clean()
+        -_install_if_needed(package)
     }
     
     BaseProject <|-- SimpleProject
@@ -100,45 +133,64 @@ classDiagram
     class Menu {
         +title: str
         +actions: List[MenuAction]
+        +style_config: Dict
         +add_action(action)
         +display()
+        +apply_style(element, style_type)
     }
     
     class MenuAction {
         +name: str
         +description: str
         +callback: function
+        +icon: str
         +execute(*args, **kwargs)
     }
     
     class CreateMenu {
-        +show_menu()
-        -create_project()
-        -update_project()
+        +template_manager: TemplateManager
+        +__init__()
+        +show_menu(directory)
+        -_create_project(directory)
+        -_update_project(directory)
+        -_list_templates()
     }
     
     class AppMenu {
+        +__init__()
         +show_menu(project_dir)
-        -detect_project_type(project_dir)
-        -manage_environment()
-        -check_environment_config()
+        -_detect_project_type(project_dir)
+        -_check_environment_config(project)
+        -_manage_environment(project)
+        -_recreate_environment(project, config_manager)
+        -_delete_environment(project, config_manager)
+        -_create_environment(project, config_manager)
+        -_show_help(project)
     }
     
-    class EnvironmentManager {
-        +current_env: Environment
-        +create_environment(name)
-        +delete_environment()
-        +recreate_environment()
-        +get_environment_info()
+    class MenuUtils {
+        +confirm_action(message)
+        +ask_for_input(message, default)
+        +ask_for_selection(message, choices)
+        +show_progress_bar(message, total)
+        +update_progress(progress_bar, value, status)
+        +style_text(text, style)
     }
     
     Menu "1" *-- "many" MenuAction : contains
     CreateMenu --> Menu : uses
     AppMenu --> Menu : uses
-    AppMenu --> EnvironmentManager : uses
+    CreateMenu --> MenuUtils : uses
+    AppMenu --> MenuUtils : uses
 ```
 
-The menu system dynamically adapts based on project type, presenting appropriate options to the user. The Command pattern is used for menu actions, improving maintainability and extensibility.
+The menu system dynamically adapts based on project type, presenting appropriate options to the user. The Command pattern is used for menu actions, improving maintainability and extensibility. Additional utility functions help with user interactions.
+
+The enhanced menu system now includes:
+- Improved styling with configurable colors and formatting
+- Icons for menu actions to improve visual recognition
+- Progress bar display for long-running operations
+- Styled text output for better readability and user experience
 
 ### 3.3 Template Management
 
@@ -146,20 +198,28 @@ The menu system dynamically adapts based on project type, presenting appropriate
 classDiagram
     class TemplateManager {
         +templates_dir: Path
+        +__init__(templates_dir)
         +list_templates()
         +create_project(template_name, destination, **variables)
-        +update_project(template_name, project_dir, **variables)
+        +update_project(project_dir, **variables)
+        -_process_template_variables(template_name, variables)
+        -_get_template_defaults(template_path)
+        -_get_template_version(template_path)
+        -_run_copier(command, source_or_destination, destination, processed_vars)
+        -_setup_example_module(destination, template_name)
     }
     
     class TemplateUtils {
-        +process_template_variables(template_name, variables)
+        +get_template_info(template_name)
         +detect_template_type(project_dir)
+        +process_template_variables(template_name, variables)
+        +setup_logger_config(project_dir)
     }
     
     TemplateManager --> TemplateUtils : uses
 ```
 
-Template management integrates with Copier to handle project creation and updates. Templates will be stored in a dedicated directory structure with proper separation of concerns.
+Template management integrates with Copier to handle project creation and updates. Templates are stored in a dedicated directory structure with proper separation of concerns. Each template now includes a sample_module with a logger implementation. The `_setup_example_module` method ensures the proper configuration of the example module and its logging capabilities.
 
 ### 3.4 Environment Management
 
@@ -174,7 +234,8 @@ classDiagram
         +name: str
     }
     
-    class EnvManager {
+    class BaseEnvManager {
+        <<external>>
         +env: Environment
         +create()
         +remove()
@@ -184,11 +245,75 @@ classDiagram
         +install_pkg(package)
     }
     
+    class EnvManager {
+        +__init__(path, clear, logger)
+        +run(*cmd_args, capture_output)
+        -_check_capture_config()
+        -_run_with_progress(cmd_args)
+    }
+    
+    class ProgressHandler {
+        +__init__(message)
+        +start()
+        +update(progress, status)
+        +finish(success)
+    }
+    
     BaseProject --> EnvManager : uses
-    EnvManager --> Environment : contains
+    EnvManager --|> BaseEnvManager : extends
+    BaseEnvManager --> Environment : contains
+    EnvManager --> ProgressHandler : uses
 ```
 
-We'll adapt the existing `env_manager` module to provide environment management capabilities, focusing on the elements needed for cicd_tools without unnecessary complexity.
+The environment management system extends an external `env_manager` library to provide environment management capabilities. It handles environment creation, activation, and running commands in the appropriate context.
+
+The enhanced EnvManager now includes:
+- Support for configurable command output capture with progress bars (enabled by default)
+- Smart detection of long-running commands
+- Visual progress feedback for operations like installation or testing
+- Integration with the progress_runner using inline_output parameter
+
+### 3.5 Configuration Management
+
+```mermaid
+classDiagram
+    class ConfigManager {
+        +config_path: Path
+        +config: Dict
+        +__init__(config_path)
+        -_load_config()
+        +save_config()
+        +get(key, default)
+        +set(key, value)
+        +delete(key)
+        +get_all()
+        +clear()
+        +get_project_config(project_path)$
+        +get_logger_config(name)
+        +setup_default_config()
+    }
+    
+    class Logger {
+        +__init__(name, config)
+        +debug(message)
+        +info(message)
+        +warning(message)
+        +error(message)
+        +critical(message)
+    }
+    
+    BaseProject --> ConfigManager : uses
+    TemplateManager --> ConfigManager : uses
+    ConfigManager --> Logger : configures
+```
+
+Configuration management provides persistent storage for project settings, template information, and environment configuration. It uses YAML files to store configuration data in a `.app_cache` directory within each project.
+
+The enhanced configuration system now includes:
+- Centralized configuration in `.app_cache/config.yaml`
+- Logger configuration with multiple output targets
+- Environment command execution parameters with capture_output enabled by default
+- Menu styling configuration
 
 ## 4. Key Workflows
 
@@ -201,10 +326,14 @@ sequenceDiagram
     CLI->>CreateMenu: show_menu()
     CreateMenu->>User: Display template options
     User->>CreateMenu: Select template
+    CreateMenu->>TemplateUtils: get_template_info(template)
     CreateMenu->>User: Project configuration questionary
     User->>CreateMenu: Provide configuration
     CreateMenu->>TemplateManager: create_project(template, config)
+    TemplateManager->>ConfigManager: Save template info
     TemplateManager->>Copier: Apply template
+    TemplateManager->>TemplateManager: _setup_example_module(destination, template)
+    TemplateManager->>ConfigManager: setup_default_config()
     TemplateManager->>User: Project created successfully
 ```
 
@@ -214,28 +343,34 @@ sequenceDiagram
 sequenceDiagram
     actor User
     participant AppMenu
-    participant Questionary
+    participant ConfigManager
+    participant MenuUtils
     participant EnvManager
     participant ProjectType
     
     User->>AppMenu: Select any operation
     AppMenu->>AppMenu: check_environment_config()
+    AppMenu->>ConfigManager: get_project_config(path)
+    ConfigManager->>AppMenu: Return config
     
     alt No environment configured
-        AppMenu->>Questionary: Ask for environment selection
-        Questionary->>User: Show options (Current/New virtual env)
-        User->>Questionary: Select option
-        Questionary->>AppMenu: Return selection
+        AppMenu->>MenuUtils: ask_for_selection("Environment type")
+        MenuUtils->>User: Show options (Current/New virtual env)
+        User->>MenuUtils: Select option
+        MenuUtils->>AppMenu: Return selection
         
         alt Selected "Current"
-            AppMenu->>EnvManager: Create with current environment
+            AppMenu->>ProjectType: configure_environment("current")
+            ProjectType->>EnvManager: Initialize with current environment
+            AppMenu->>ConfigManager: Set environment config
         else Selected "New virtual environment"
-            AppMenu->>Questionary: Ask for environment name
-            Questionary->>User: Prompt for name
-            User->>Questionary: Provide environment name
-            Questionary->>AppMenu: Return environment name
-            AppMenu->>EnvManager: Create new environment with name
-            EnvManager->>EnvManager: Create virtual environment
+            AppMenu->>MenuUtils: ask_for_input("Environment name")
+            MenuUtils->>User: Prompt for name
+            User->>MenuUtils: Provide environment name
+            MenuUtils->>AppMenu: Return environment name
+            AppMenu->>ProjectType: configure_environment("virtual", name)
+            ProjectType->>EnvManager: Create virtual environment
+            AppMenu->>ConfigManager: Set environment config
         end
         
         AppMenu->>ProjectType: install()
@@ -251,35 +386,55 @@ sequenceDiagram
 sequenceDiagram
     actor User
     participant AppMenu
-    participant Questionary
-    participant EnvironmentManager
+    participant Menu
+    participant ConfigManager
+    participant MenuUtils
+    participant EnvManager
     
     User->>AppMenu: Select "Manage Environment"
-    AppMenu->>Questionary: Show environment options
-    Questionary->>User: Display options (Recreate/Delete/Create)
-    User->>Questionary: Select option
-    Questionary->>AppMenu: Return selection
+    AppMenu->>ConfigManager: get_project_config(path)
+    ConfigManager->>AppMenu: Return config
     
-    alt Selected "Recreate"
-        AppMenu->>EnvironmentManager: recreate_environment()
-        EnvironmentManager->>EnvironmentManager: Delete virtual environment
-        EnvironmentManager->>EnvironmentManager: Create new environment
-        EnvironmentManager->>AppMenu: Return success
-    else Selected "Delete"
-        AppMenu->>EnvironmentManager: delete_environment()
-        EnvironmentManager->>EnvironmentManager: Remove virtual environment
-        EnvironmentManager->>AppMenu: Return success
-    else Selected "Create"
-        AppMenu->>Questionary: Ask for environment name
-        Questionary->>User: Prompt for name
-        User->>Questionary: Provide environment name
-        Questionary->>AppMenu: Return environment name
-        AppMenu->>EnvironmentManager: create_environment(name)
-        EnvironmentManager->>EnvironmentManager: Create new environment
-        EnvironmentManager->>AppMenu: Return success
+    alt Has environment config
+        AppMenu->>Menu: Create environment menu
+        
+        alt Virtual environment
+            Menu->>Menu: Add recreate/delete actions
+        end
+        
+        Menu->>Menu: Add create action
+        Menu->>User: Display menu
+        User->>Menu: Select option
+        
+        alt Selected "Recreate"
+            Menu->>AppMenu: _recreate_environment()
+            AppMenu->>MenuUtils: confirm_action()
+            MenuUtils->>User: Ask for confirmation
+            User->>MenuUtils: Confirm
+            AppMenu->>EnvManager: remove()
+            AppMenu->>ProjectType: configure_environment("virtual", name)
+            AppMenu->>ProjectType: install()
+        else Selected "Delete"
+            Menu->>AppMenu: _delete_environment()
+            AppMenu->>MenuUtils: confirm_action()
+            MenuUtils->>User: Ask for confirmation
+            User->>MenuUtils: Confirm
+            AppMenu->>EnvManager: remove()
+            AppMenu->>ConfigManager: delete("environment")
+        else Selected "Create"
+            Menu->>AppMenu: _create_environment()
+            AppMenu->>MenuUtils: ask_for_input("Environment name")
+            MenuUtils->>User: Prompt for name
+            User->>MenuUtils: Provide environment name
+            AppMenu->>ProjectType: configure_environment("virtual", name)
+            AppMenu->>ConfigManager: set("environment", config)
+            AppMenu->>ProjectType: install()
+        end
+        
+        AppMenu->>User: Display operation result
+    else No environment config
+        AppMenu->>User: Display "No environment configured"
     end
-    
-    AppMenu->>User: Display operation result
 ```
 
 ### 4.4 App Operations by Project Type
@@ -291,134 +446,42 @@ sequenceDiagram
     actor User
     User->>AppMenu: Select Build option
     AppMenu->>SimpleProject: build()
-    SimpleProject->>EnvManager: run("python", "setup.py", "build")
-    EnvManager->>SimpleProject: Return result
+    SimpleProject->>ConfigManager: Check capture_output flag
+    alt capture_output enabled
+        SimpleProject->>MenuUtils: show_progress_bar("Building project...")
+        SimpleProject->>EnvManager: run("python", "setup.py", "build", capture_output=True)
+        SimpleProject->>MenuUtils: update_progress()
+    else capture_output disabled
+        SimpleProject->>EnvManager: run("python", "setup.py", "build", capture_output=False)
+    end
     SimpleProject->>AppMenu: Return operation status
     AppMenu->>User: Display build results
 ```
 
-#### 4.4.2 Development Project - Install Operation
+#### 4.4.2 Logger Configuration and Usage
 
 ```mermaid
 sequenceDiagram
-    actor User
-    User->>AppMenu: Select Install option
-    AppMenu->>DevelopmentProject: install()
-    DevelopmentProject->>EnvManager: get_env_manager()
-    DevelopmentProject->>EnvManager: run("python", "-m", "pip", "install", "-e", ".[dev]")
-    EnvManager->>DevelopmentProject: Return result
-    DevelopmentProject->>AppMenu: Return operation status
-    AppMenu->>User: Display installation results
-```
-
-#### 4.4.3 Development Project - Test Operation
-
-```mermaid
-sequenceDiagram
-    actor User
-    User->>AppMenu: Select Test option
-    AppMenu->>DevelopmentProject: test()
-    DevelopmentProject->>Questionary: Display test options (All/Failed)
-    Questionary->>User: Show test choices
-    User->>Questionary: Select test option
-    Questionary->>DevelopmentProject: Return selection
-    DevelopmentProject->>EnvManager: run("pytest", selected_option, "--tb=short", "-v")
-    EnvManager->>DevelopmentProject: Return test results
-    DevelopmentProject->>AppMenu: Return operation status
-    AppMenu->>User: Display test results
-```
-
-#### 4.4.4 Development/GitHub Project - Prehook Operation
-
-```mermaid
-sequenceDiagram
-    actor User
-    User->>AppMenu: Select Prehook option
-    AppMenu->>User: Ask for action (enable/disable)
-    User->>AppMenu: Provide action
-    AppMenu->>ProjectType: hooks(action)
-    alt action == "on"
-        ProjectType->>EnvManager: run("pre-commit", "install")
-    else action == "off"
-        ProjectType->>EnvManager: run("pre-commit", "uninstall")
+    participant Application
+    participant ConfigManager
+    participant Logger
+    
+    Application->>ConfigManager: get_logger_config("my_logger")
+    ConfigManager->>ConfigManager: Read from .app_cache/config.yaml
+    ConfigManager->>Application: Return logger configuration
+    
+    Application->>Logger: Create logger with config
+    Application->>Logger: logger.info("Message")
+    
+    Logger->>Logger: Format message according to config
+    
+    alt Console output configured
+        Logger->>Console: Write formatted message
     end
-    EnvManager->>ProjectType: Return result
-    ProjectType->>AppMenu: Return operation status
-    AppMenu->>User: Display hook configuration result
-```
-
-#### 4.4.5 Development Project - Release Operation
-
-```mermaid
-sequenceDiagram
-    actor User
-    User->>AppMenu: Select Release option
-    AppMenu->>User: Ask for release type (beta/prod)
-    User->>AppMenu: Provide release type
-    AppMenu->>DevelopmentProject: release(type)
-    DevelopmentProject->>DevelopmentProject: _install_if_needed("build")
-    DevelopmentProject->>DevelopmentProject: _install_if_needed("bump2version")
-    DevelopmentProject->>DevelopmentProject: _configure_git_for_release()
-    alt type == "prod"
-        DevelopmentProject->>EnvManager: run("bump2version", "patch")
-    else type == "beta"
-        DevelopmentProject->>DevelopmentProject: _get_current_version()
-        DevelopmentProject->>EnvManager: run("bump2version", "patch", "--new-version", version+".beta")
+    
+    alt File output configured
+        Logger->>File: Write formatted message
     end
-    DevelopmentProject->>EnvManager: run("python", "-m", "build")
-    DevelopmentProject->>DevelopmentProject: _prepare_release_directory(type)
-    DevelopmentProject->>DevelopmentProject: Move build artifacts to release directory
-    DevelopmentProject->>AppMenu: Return operation status
-    AppMenu->>User: Display release creation result
-```
-
-#### 4.4.6 Development Project - Deploy Operation
-
-```mermaid
-sequenceDiagram
-    actor User
-    User->>AppMenu: Select Deploy option
-    AppMenu->>User: Ask for deploy target (test/prod)
-    User->>AppMenu: Provide deploy target
-    AppMenu->>DevelopmentProject: deploy(target)
-    DevelopmentProject->>DevelopmentProject: _install_if_needed("twine")
-    alt target == "prod"
-        DevelopmentProject->>DevelopmentProject: Check for production release
-        DevelopmentProject->>EnvManager: run("twine", "upload", "dist/release/*")
-    else target == "test"
-        DevelopmentProject->>DevelopmentProject: Check for beta release
-        DevelopmentProject->>EnvManager: run("twine", "upload", "--repository", "testpypi", "dist/beta/*")
-    end
-    DevelopmentProject->>AppMenu: Return operation status
-    AppMenu->>User: Display deployment result
-```
-
-#### 4.4.7 GitHub Project - Clone Repository Operation
-
-```mermaid
-sequenceDiagram
-    actor User
-    User->>CreateMenu: Select GitHub project
-    CreateMenu->>User: Ask for repository URL
-    User->>CreateMenu: Provide repository URL
-    CreateMenu->>GitHubProject: clone_repo(url)
-    GitHubProject->>EnvManager: run("git", "clone", url, project_path)
-    EnvManager->>GitHubProject: Return clone result
-    GitHubProject->>TemplateManager: update_project(template, project_path)
-    TemplateManager->>GitHubProject: Return template update result
-    GitHubProject->>CreateMenu: Return operation status
-    CreateMenu->>User: Display repository setup result
-```
-
-#### 4.4.8 Help Operation (Common to all project types)
-
-```mermaid
-sequenceDiagram
-    actor User
-    User->>AppMenu: Select Help option
-    AppMenu->>AppMenu: _get_command_help(command)
-    AppMenu->>AppMenu: Load documentation from markdown
-    AppMenu->>User: Display help text
 ```
 
 ## 5. Implementation Approach
@@ -429,12 +492,15 @@ sequenceDiagram
    - ProjectType classes handle project-specific logic
    - MenuSystem handles user interaction
    - TemplateManager handles template operations
+   - ConfigManager handles configuration persistence
    - EnvironmentManager handles environment tasks
+   - Logger handles logging functionality
 
 2. **Open/Closed Principle**: Open for extension, closed for modification
    - New project types can be added without modifying existing code
    - Menu system can be extended with new actions
    - Environment management is extensible
+   - Logging system supports multiple configurations without code changes
 
 3. **Liskov Substitution Principle**: Subtypes are substitutable for base types
    - All ProjectType implementations can be used interchangeably
@@ -449,7 +515,9 @@ sequenceDiagram
    - Core components depend on interfaces, not concrete implementations
    - Dependency injection used where appropriate
 
-### 5.2 GitHub Workflow Configurations
+### 5.2 GitHub Workflow Configurations (Planned)
+
+The following GitHub workflow configurations are planned for future implementation:
 
 #### 5.2.1 pytest.yml Workflow
 
@@ -647,17 +715,23 @@ jobs:
         twine upload dist/release/*
 ```
 
-## 6. Development Steps
+## 6. Development Progress
 
-1. Set up project structure and dependencies
-2. Implement core interfaces and base classes
-3. Develop template management system
-4. Implement project type classes
-5. Create menu system with dynamic adaptation
-6. Implement environment management
-7. Develop project templates for each project type
-8. Implement GitHub workflow configurations
-9. Write comprehensive tests and documentation
+1. ✅ Set up project structure and dependencies
+2. ✅ Implement core interfaces and base classes
+3. ✅ Develop template management system
+4. ✅ Implement project type classes
+5. ✅ Create menu system with dynamic adaptation
+6. ✅ Implement environment management
+7. ✅ Develop project templates for each project type
+8. ⏳ Implement enhanced menu system with improved styling
+9. ⏳ Replace {{ project_name.replace('-', '_') }} with sample_module
+10. ⏳ Add example modules with logging to all templates
+11. ⏳ Implement centralized configuration in .app_cache
+12. ⏳ Configure capture_output flag (enabled by default)
+13. ⏳ Develop progress bar display for captured output
+14. ⏳ Implement GitHub workflow configurations
+15. ⏳ Write comprehensive tests and documentation
 
 ## 7. Technical Considerations
 
@@ -666,11 +740,13 @@ jobs:
 - **Questionary**: For interactive command prompts
 - **Copier**: For template-based project creation and updates
 - **PyYAML**: For configuration handling
-- **Click**: For CLI interface (optional, can use argparse)
+- **Click**: For CLI interface
+- **Rich**: For enhanced terminal formatting and progress bars
+- **Logging**: For flexible logging capabilities
 
 ### 7.2 Error Handling
 
-- Comprehensive error handling with descriptive messages
+- Comprehensive try/except blocks with descriptive messages
 - Graceful failure modes with recovery options
 - Proper logging at appropriate levels
 
@@ -680,6 +756,53 @@ jobs:
 - Integration tests for workflow verification
 - Mocking for external dependencies
 
+### 7.4 Configuration Structure
+
+The `.app_cache/config.yaml` will have the following structure:
+
+```yaml
+# Environment configuration
+environment:
+  capture_output: true  # Controls whether to capture command output and show progress bar (enabled by default)
+  
+# Logging configuration
+logging:
+  default:
+    level: INFO
+    handlers:
+      - type: console
+        format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+      - type: file
+        filename: "app.log"
+        format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        max_bytes: 10485760  # 10MB
+        backup_count: 3
+        
+  # Additional logger configurations
+  development:
+    level: DEBUG
+    handlers:
+      - type: console
+        format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+      - type: file
+        filename: "dev.log"
+        format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        max_bytes: 10485760
+        backup_count: 5
+
+# Menu styling configuration
+styling:
+  colors:
+    primary: "#007BFF"
+    secondary: "#6C757D"
+    success: "#28A745"
+    warning: "#FFC107"
+    error: "#DC3545"
+  formatting:
+    title_style: "bold underline"
+    menu_item_style: "italic"
+```
+
 ## 8. Future Extensibility
 
 The architecture is designed for future expansion:
@@ -687,3 +810,6 @@ The architecture is designed for future expansion:
 - New menu actions can be registered dynamically
 - Template system supports custom template variables and functions
 - Environment management system can be extended for additional configuration options
+- Configuration management provides a foundation for more complex project settings
+- Logging system supports custom handlers and formatters
+- Menu styling can be extended with additional themes

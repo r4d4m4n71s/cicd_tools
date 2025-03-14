@@ -161,6 +161,26 @@ def test_template_manager_create_project():
         # Create test template
         create_test_template(templates_dir, "template1")
         
+        # Create sample_module directory in the template
+        sample_module_dir = templates_dir / "template1" / "sample_module"
+        sample_module_dir.mkdir()
+        
+        # Create __init__.py.jinja in sample_module
+        with open(sample_module_dir / "__init__.py.jinja", "w", encoding="utf-8") as f:
+            f.write('"""Example module for {{ project_name }}."""\n\n__version__ = "0.1.0"')
+        
+        # Create main.py.jinja in sample_module
+        with open(sample_module_dir / "main.py.jinja", "w", encoding="utf-8") as f:
+            f.write('"""Main module for {{ project_name }}."""\n\ndef main():\n    print("Hello, world!")')
+        
+        # Create .app_cache directory in the template
+        app_cache_dir = templates_dir / "template1" / ".app_cache"
+        app_cache_dir.mkdir()
+        
+        # Create config.yaml.jinja in .app_cache
+        with open(app_cache_dir / "config.yaml.jinja", "w", encoding="utf-8") as f:
+            f.write('environment:\n  capture_output: true\n\nlogging:\n  default:\n    level: INFO')
+        
         # Create destination directory
         destination = Path(temp_dir) / "project"
         
@@ -181,6 +201,15 @@ def test_template_manager_create_project():
             assert (destination / "README.md").exists()
             assert (destination / "pyproject.toml").exists()
             
+            # Check that the sample_module was created
+            assert (destination / "sample_module").exists()
+            assert (destination / "sample_module" / "__init__.py").exists()
+            assert (destination / "sample_module" / "main.py").exists()
+            
+            # Check that the .app_cache directory was created
+            assert (destination / ".app_cache").exists()
+            assert (destination / ".app_cache" / "config.yaml").exists()
+            
             # Check that the template information was saved
             config_manager = ConfigManager.get_project_config(destination)
             template_config = config_manager.get("template")
@@ -190,6 +219,11 @@ def test_template_manager_create_project():
             assert template_config["variables"]["project_name"] == "test-project"
             assert template_config["variables"]["author"] == "Test Author"
             assert template_config["variables"]["license"] == "MIT"
+            
+            # Check that the environment configuration was set up
+            env_config = config_manager.get("environment")
+            assert env_config is not None
+            assert env_config.get("capture_output") is True
         except RuntimeError as e:
             if "Copier execution failed" in str(e):
                 pytest.skip("Copier execution failed, skipping test")

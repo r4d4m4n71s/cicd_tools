@@ -101,4 +101,64 @@ def test_config_manager_get_project_config():
         project_path = Path(temp_dir)
         config_manager = ConfigManager.get_project_config(project_path)
         
-        assert config_manager.config_path == project_path / '.cicd_tools_cache/config.yaml'
+        assert config_manager.config_path == project_path / '.app_cache/config.yaml'
+
+
+def test_config_manager_get_logger_config():
+    """Test ConfigManager get_logger_config method."""
+    with tempfile.TemporaryDirectory() as temp_dir:
+        config_path = Path(temp_dir) / "config.yaml"
+        config_manager = ConfigManager(config_path)
+        
+        # Set logging configuration
+        config_manager.set("logging", {
+            "default": {
+                "level": "INFO",
+                "handlers": [
+                    {
+                        "type": "console",
+                        "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+                    }
+                ]
+            },
+            "debug": {
+                "level": "DEBUG",
+                "handlers": [
+                    {
+                        "type": "file",
+                        "filename": "debug.log"
+                    }
+                ]
+            }
+        })
+        
+        # Get default logger config
+        default_config = config_manager.get_logger_config()
+        assert default_config["level"] == "INFO"
+        assert len(default_config["handlers"]) == 1
+        assert default_config["handlers"][0]["type"] == "console"
+        
+        # Get specific logger config
+        debug_config = config_manager.get_logger_config("debug")
+        assert debug_config["level"] == "DEBUG"
+        assert len(debug_config["handlers"]) == 1
+        assert debug_config["handlers"][0]["type"] == "file"
+        
+        # Get non-existent logger config (should return default)
+        nonexistent_config = config_manager.get_logger_config("nonexistent")
+        assert nonexistent_config["level"] == "INFO"
+
+
+def test_config_manager_setup_default_config():
+    """Test ConfigManager setup_default_config method."""
+    with tempfile.TemporaryDirectory() as temp_dir:
+        config_path = Path(temp_dir) / "config.yaml"
+        config_manager = ConfigManager(config_path)
+        
+        # Set up default configuration
+        config_manager.setup_default_config()
+        
+        # Check that default values were set
+        assert config_manager.get("environment", {}).get("capture_output") is True
+        assert "logging" in config_manager.get_all()
+        assert "styling" in config_manager.get_all()

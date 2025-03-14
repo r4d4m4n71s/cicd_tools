@@ -1,8 +1,8 @@
 """
-Tests for the Environment and EnvManager classes.
+Tests for the Environment and BaseEnvManager classes.
 
-These tests verify the functionality of the Environment and EnvManager classes
-which are now using the python-env-manager library.
+These tests verify the functionality of the Environment and BaseEnvManager classes
+from the python-env-manager library.
 """
 
 import os
@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 
-from cicd_tools.utils.env_manager import Environment, EnvManager
+from env_manager import Environment, EnvManager, PackageManager
 
 
 def test_environment_init():
@@ -35,7 +35,7 @@ def test_environment_init():
 
 
 def test_env_manager_init():
-    """Test EnvManager initialization."""
+    """Test BaseEnvManager initialization."""
     # Test with current environment
     env_manager = EnvManager()
     
@@ -57,7 +57,7 @@ def test_env_manager_init():
     reason="Skip virtual environment creation in CI"
 )
 def test_env_manager_create_remove():
-    """Test EnvManager create and remove methods."""
+    """Test BaseEnvManager create and remove methods."""
     with tempfile.TemporaryDirectory() as temp_dir:
         # Create a virtual environment
         env_manager = EnvManager(temp_dir, clear=True)
@@ -79,13 +79,13 @@ def test_env_manager_create_remove():
     reason="Skip virtual environment creation in CI"
 )
 def test_env_manager_run():
-    """Test EnvManager run method."""
+    """Test BaseEnvManager run method."""
     with tempfile.TemporaryDirectory() as temp_dir:
         # Create a virtual environment
         env_manager = EnvManager(temp_dir, clear=True)
         
         # Run a command
-        result = env_manager.run("python", "--version", capture_output=True)
+        result = env_manager.get_runner().run("python", "--version", capture_output=True)
         
         # Check that the command was executed successfully
         assert result.returncode == 0
@@ -97,16 +97,45 @@ def test_env_manager_run():
     reason="Skip virtual environment creation in CI"
 )
 def test_env_manager_install_pkg():
-    """Test EnvManager install_pkg method."""
+    """Test BaseEnvManager install_pkg method."""
     with tempfile.TemporaryDirectory() as temp_dir:
         # Create a virtual environment
         env_manager = EnvManager(temp_dir, clear=True)
         
         # Install a package
-        env_manager.install_pkg("pytest")
-        
+        packageManager = PackageManager(env_manager.get_runner())
+        packageManager.install("pytest")
+
         # Check that the package was installed
-        result = env_manager.run("pip", "show", "pytest", capture_output=True)
+        assert "pytest" in packageManager.list_packages()
+
+
+@pytest.mark.skipif(
+    "GITHUB_ACTIONS" in os.environ,
+    reason="Skip virtual environment creation in CI"
+)
+def test_run_with_progress():
+    """Test run method with progress tracking in BaseProject."""
+    from cicd_tools.project_types.base_project import BaseProject
+    
+    class TestProject(BaseProject):
+        def get_menus(self):
+            return []
+    
+    with tempfile.TemporaryDirectory() as temp_dir:
+        # Create test project
+        project = TestProject(Path(temp_dir))
         
+        # Create .app_cache directory and config.yaml
+        app_cache_dir = Path(temp_dir) / ".app_cache"
+        app_cache_dir.mkdir()
+        
+        with open(app_cache_dir / "config.yaml", "w") as f:
+            f.write("environment:\n  capture_output: true\n")
+        
+        # Test run method with progress tracking
+        result = project.run("python", "--version")
+        
+        # Check that the command was executed successfully
         assert result.returncode == 0
-        assert "pytest" in result.stdout
+        assert "Python" in result.stdout
