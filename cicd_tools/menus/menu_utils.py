@@ -37,6 +37,7 @@ def display_header(title: str, subtitle: Optional[str] = None) -> None:
         title: Title text
         subtitle: Optional subtitle text
     """
+    console.clear()
     console.print(Panel(
         Text(title, style="bold blue"),
         subtitle=subtitle,
@@ -145,27 +146,31 @@ class Menu:
         ).ask()
         
         # Handle Back/Exit option
-        if result is None or result == "Back/Exit":
+        if result is None:
             return None
         
-        # # Convert result to integer if it's a string that represents an integer
-        # if isinstance(result, str) and result.isdigit():
-        #     result = int(result)
+        # Convert result to integer if it's a string that represents an integer
+        if isinstance(result, str) and result.isdigit():
+            result = int(result)
         
-        # # If result is still a string, try to find the corresponding action
-        # if isinstance(result, str):
-        #     # Try to find the action by name
-        #     for i, action in enumerate(self.actions):
-        #         action_title = f"{action.name} - {action.description}"
-        #         if result == action_title or result == action.name:
-        #             result = i
-        #             break
-        #     else:
-        #         # If we get here, we couldn't find a matching action
-        #         # This is a fallback to prevent errors
-        #         return None
+        # If result is still a string, try to find the corresponding action
+        if isinstance(result, str):
+            # Try to find the action by name
+            for i, action in enumerate(self.actions):
+                action_title = f"{action.name} - {action.description}"
+                if result == action_title or result == action.name:
+                    result = i
+                    break
+            else:
+                # If we get here, we couldn't find a matching action
+                # This is a fallback to prevent errors
+                return None
             
-        selected_action = self.actions[result]
+        # Ensure result is a valid integer index
+        if isinstance(result, int) and 0 <= result < len(self.actions):
+            selected_action = self.actions[result]
+        else:
+            return None
         return selected_action.execute()
 
 def confirm_action(message: str) -> bool:

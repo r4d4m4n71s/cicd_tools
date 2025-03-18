@@ -158,7 +158,7 @@ def run_with_progress(self, *cmd_args):
         Command output
     """
     env_manager = self.get_env_manager()
-    config_manager = ConfigManager.get_project_config(self.project_path)
+    config_manager = ConfigManager.get_config(self.project_path)
     capture_output = config_manager.get("environment", {}).get("capture_output", True)
     
     if capture_output:

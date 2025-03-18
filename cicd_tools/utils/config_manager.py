@@ -12,9 +12,7 @@ from typing import Dict, Any, Optional, Union, List
 
 import yaml
 
-# Update path to use .app_cache instead of .cicd_tools_cache
 CICD_TOOLS_CACHE_FILE = '.app_cache/config.yaml'
-OLD_CACHE_FILE = '.cicd_tools_cache/config.yaml'
 
 class ConfigManager:
     
@@ -32,29 +30,9 @@ class ConfigManager:
             config_path: Path to the configuration file
         """
         self.config_path = config_path
-        self.config: Dict[str, Any] = {}
-        
-        # Check for migration from old path
-        self._check_migration()
+        self.config: Dict[str, Any] = {}                
         self._load_config()
-        
-    def _check_migration(self) -> None:
-        """
-        Check if we need to migrate from old config path to new one.
-        """
-        # If new config doesn't exist but old one does, migrate
-        old_path = self.config_path.parent.parent / OLD_CACHE_FILE
-        if not self.config_path.exists() and old_path.exists():
-            try:
-                # Ensure parent directory exists
-                self.config_path.parent.mkdir(parents=True, exist_ok=True)
                 
-                # Copy old config to new location
-                shutil.copy2(old_path, self.config_path)
-                print(f"Migrated configuration from {old_path} to {self.config_path}")
-            except Exception as e:
-                print(f"Error migrating configuration: {e}")
-        
     def _load_config(self) -> None:
         """
         Load configuration from YAML file.
@@ -201,21 +179,24 @@ class ConfigManager:
         self.save_config()
         
     @staticmethod
-    def get_project_config(project_path: Path) -> 'ConfigManager':
+    def get_config(config_path: Optional[Path] = None) -> 'ConfigManager':
         """
-        Get a configuration manager for a project.
+        Get a configuration manager.
         
         Args:
-            project_path: Path to the project directory
+            config_path: Path to the config directory. If not provided, uses the current directory.
             
         Returns:
-            A configuration manager for the project
+            A configuration manager
         """
-        config_path = project_path / CICD_TOOLS_CACHE_FILE
-        config_manager = ConfigManager(config_path)
+        if config_path is None:
+            config_path = Path(".")
+            
+        config_file_path = config_path / CICD_TOOLS_CACHE_FILE
+        config_manager = ConfigManager(config_file_path)
         
         # Set up default configuration if it doesn't exist
-        if not config_path.exists():
+        if not config_file_path.exists():
             config_manager.setup_default_config()
             
         return config_manager

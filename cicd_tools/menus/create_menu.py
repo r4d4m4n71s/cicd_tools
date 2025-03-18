@@ -14,7 +14,7 @@ from questionary import Choice
 from cicd_tools.menus.menu_utils import Menu, MenuAction, confirm_action, ask_for_input, ask_for_selection
 from cicd_tools.templates.template_manager import TemplateManager
 from cicd_tools.templates.template_utils import get_template_info, process_template_variables
-
+from cicd_tools.utils.config_manager import ConfigManager
 
 class CreateMenu:
     """
@@ -35,21 +35,22 @@ class CreateMenu:
             directory: Directory where the project will be created
         """
         menu = Menu("Create Menu")
-        
-        menu.add_action(MenuAction(
-            "Create Project",
-            "Create a new project from a template",
-            self._create_project,
-            directory=directory
-        ))
-        
-        menu.add_action(MenuAction(
-            "Update Project",
-            "Update an existing project using its template",
-            self._update_project,
-            directory=directory
-        ))
-        
+                
+        if self.template_manager.is_project_from_template(directory):
+            menu.add_action(MenuAction(
+                "Update Project",
+                "Update an existing project using its template",
+                self._update_project,
+                directory=directory
+            ))
+        else:
+            menu.add_action(MenuAction(
+                "Create Project",
+                "Create a new project from a template",
+                self._create_project,
+                directory=directory
+            ))
+
         menu.add_action(MenuAction(
             "List Templates",
             "List available templates",
@@ -122,12 +123,11 @@ class CreateMenu:
                 template_name,
                 project_dir,
                 **variables
-            )
-            
+            )            
             print(f"Project created successfully at {project_dir}")
         except Exception as e:
-            print(f"Failed to create project: {e}")
-            
+            print(f"Failed to create project: {e}")   
+
     def _update_project(self, directory: Path) -> None:
         """
         Update an existing project using its template.

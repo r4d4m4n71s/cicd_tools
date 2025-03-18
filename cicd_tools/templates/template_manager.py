@@ -87,7 +87,7 @@ class TemplateManager:
             self._run_copier("copy", template_path, destination, processed_vars)
             
             # Save template information in project configuration
-            config_manager = ConfigManager.get_project_config(destination)
+            config_manager = ConfigManager.get_config(destination)
             config_manager.set("template", {
                 "name": template_name,
                 "version": self._get_template_version(template_path),
@@ -95,11 +95,16 @@ class TemplateManager:
             })
             
             # Set up example module and default configuration
-            self._setup_example_module(destination, template_name)
-            
+            self._setup_example_module(destination, template_name)                                           
+
         except Exception as e:
             raise RuntimeError(f"Failed to create project: {e}") from e
             
+    def is_project_from_template(self, dir: Path) -> Dict[str, Any]:        
+        config_manager = ConfigManager.get_config(dir)     
+        template_config = config_manager.get("template")        
+        return template_config and "name" in template_config        
+    
     def update_project(
         self,
         project_dir: Path,
@@ -116,13 +121,13 @@ class TemplateManager:
             ValueError: If the project wasn't created from a template
             RuntimeError: If project update fails
         """
-        # Get project configuration
-        config_manager = ConfigManager.get_project_config(project_dir)
+        # Get template configuration
+        config_manager = ConfigManager.get_config(project_dir)
         template_config = config_manager.get("template")
         
         if not template_config or "name" not in template_config:
             raise ValueError("Project wasn't created from a template")
-            
+        
         template_name = template_config["name"]
         template_path = self.templates_dir / template_name
         
@@ -139,9 +144,10 @@ class TemplateManager:
         # Update the project using Copier
         try:
             # Run Copier to update the project
-            self._run_copier("update", project_dir, processed_vars=processed_vars)
+            self._run_copier("update", project_dir, destination=template_path, processed_vars=processed_vars)
             
             # Update template information in project configuration
+            config_manager = ConfigManager.get_config(project_dir)
             config_manager.set("template", {
                 "name": template_name,
                 "version": self._get_template_version(template_path),
@@ -293,37 +299,75 @@ class TemplateManager:
         """
         Run Copier with the specified command.
         
+        This method handles both project creation and updates using Copier.
+        For creation, it runs in non-interactive mode with quiet output.
+        For updates, it runs in fully interactive mode to allow user input.
+        
         Args:
             command: Copier command ('copy' or 'update')
             source_or_destination: Source template path (for 'copy') or destination project path (for 'update')
-            destination: Destination project path (for 'copy')
+            destination: Destination project path (for 'copy') or template path (for 'update')
             processed_vars: Processed template variables
             
         Raises:
+            ValueError: If required parameters are missing or the command is invalid
             RuntimeError: If Copier execution fails
         """
-        # Build command arguments
-        cmd = ["copier", command]
+        # Validate parameters
+        if destination is None:
+            raise ValueError(f"Destination is required for '{command}' command")
+            
+        # Build the base command
+        cmd = ["copier", "copy"]
         
+        # Configure command based on operation type
         if command == "copy":
-            if destination is None:
-                raise ValueError("Destination is required for 'copy' command")
-            cmd.extend([str(source_or_destination), str(destination)])
+            # For initial project creation: template -> destination
+            src_path = str(source_or_destination)
+            dest_path = str(destination)
+            interactive = False
+            options = ["--force", "--quiet"]
         elif command == "update":
-            cmd.append(str(source_or_destination))
+            # For project updates: template -> project
+            src_path = str(destination)  # Template path
+            dest_path = str(source_or_destination)  # Project path
+            interactive = True
+            options = ["--force"]  # Only force, no quiet to allow interaction
         else:
             raise ValueError(f"Invalid Copier command: {command}")
             
-        # Add variables
+        # Add source and destination paths
+        cmd.extend([src_path, dest_path])
+        
+        # Add template variables if provided
         if processed_vars:
             for key, value in processed_vars.items():
                 cmd.extend(["--data", f"{key}={value}"])
                 
-        # Add common options
-        cmd.extend(["--force", "--quiet"])
+        # Add command options
+        cmd.extend(options)
         
-        # Run Copier
+        # Run Copier with appropriate settings based on interactive mode
         try:
-            subprocess.run(cmd, check=True, capture_output=True, text=True)
+            if interactive:
+                # For interactive updates, use the parent process's stdin/stdout/stderr
+                # This allows direct user interaction with Copier's prompts
+                subprocess.run(
+                    cmd,
+                    check=True,
+                    stdin=None,  # Use parent's stdin for input
+                    stdout=None,  # Use parent's stdout for output
+                    stderr=None,  # Use parent's stderr for errors
+                    text=True
+                )
+            else:
+                # For non-interactive operations, capture output
+                subprocess.run(
+                    cmd,
+                    check=True,
+                    capture_output=True,
+                    text=True
+                )
         except subprocess.CalledProcessError as e:
-            raise RuntimeError(f"Copier execution failed: {e.stderr}") from e
+            error_message = e.stderr if e.stderr else e.stdout if e.stdout else str(e)
+            raise RuntimeError(f"Copier execution failed: {error_message}") from e

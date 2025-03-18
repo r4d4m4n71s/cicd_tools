@@ -6,7 +6,7 @@ This module provides the abstract base class for all project types.
 
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Dict, List, Any, Optional, Tuple, Union
+from typing import Dict, List, Any, Optional
 
 # Import EnvManager directly from env_manager
 from env_manager import EnvManager, ProgressRunner
@@ -54,7 +54,7 @@ class BaseProject(ABC):
             Command output
         """
         env_manager = self.get_env_manager()
-        config_manager = ConfigManager.get_project_config(self.project_path)
+        config_manager = ConfigManager.get_config(self.project_path)
         capture_output = config_manager.get("environment", {}).get("capture_output", True)
         
         if capture_output:

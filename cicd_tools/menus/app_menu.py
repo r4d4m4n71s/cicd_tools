@@ -43,7 +43,7 @@ class AppMenu:
         project_type = self._detect_project_type(project_dir)
         
         if project_type is None:
-            print(f"Could not detect project type for {project_dir}")
+            print(f"Could not detect project type for {project_dir}, try to create a new project using create cmd")
             return
             
         # Create project instance
@@ -53,7 +53,7 @@ class AppMenu:
         self._check_environment_config(project)
         
         # Get styling configuration
-        config_manager = ConfigManager.get_project_config(project_dir)
+        config_manager = ConfigManager.get_config(project_dir)
         style_config = config_manager.get("styling", {})
         
         # Create menu with styling
@@ -107,17 +107,9 @@ class AppMenu:
             return DevelopmentProject
         elif template_type == "simple_project":
             return SimpleProject
-            
-        # Try to detect based on project structure
-        if (project_dir / ".github").is_dir():
-            return GitHubProject
-        elif (project_dir / ".pre-commit-config.yaml").exists():
-            return DevelopmentProject
-        elif (project_dir / "setup.py").exists():
-            return SimpleProject
-            
+                   
         # Default to simple project
-        return SimpleProject
+        return None
         
     def _check_environment_config(self, project: BaseProject) -> None:
         """
@@ -127,7 +119,7 @@ class AppMenu:
             project: Project instance
         """
         # Get project configuration
-        config_manager = ConfigManager.get_project_config(project.project_path)
+        config_manager = ConfigManager.get_config(project.project_path)
         env_config = config_manager.get("environment")
         
         if env_config is None:
@@ -158,7 +150,7 @@ class AppMenu:
             project: Project instance
         """
         # Get project configuration
-        config_manager = ConfigManager.get_project_config(project.project_path)
+        config_manager = ConfigManager.get_config(project.project_path)
         env_config = config_manager.get("environment")
         
         if env_config is None:

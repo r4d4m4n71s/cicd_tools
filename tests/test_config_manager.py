@@ -95,11 +95,11 @@ def test_config_manager_clear():
         assert config_manager.get_all() == {}
 
 
-def test_config_manager_get_project_config():
-    """Test ConfigManager get_project_config."""
+def test_config_manager_get_config():
+    """Test ConfigManager get_config."""
     with tempfile.TemporaryDirectory() as temp_dir:
         project_path = Path(temp_dir)
-        config_manager = ConfigManager.get_project_config(project_path)
+        config_manager = ConfigManager.get_config(project_path)
         
         assert config_manager.config_path == project_path / '.app_cache/config.yaml'
 

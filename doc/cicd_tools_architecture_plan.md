@@ -288,7 +288,7 @@ classDiagram
         +delete(key)
         +get_all()
         +clear()
-        +get_project_config(project_path)$
+        +get_config(project_path)$
         +get_logger_config(name)
         +setup_default_config()
     }
@@ -350,7 +350,7 @@ sequenceDiagram
     
     User->>AppMenu: Select any operation
     AppMenu->>AppMenu: check_environment_config()
-    AppMenu->>ConfigManager: get_project_config(path)
+    AppMenu->>ConfigManager: get_config(path)
     ConfigManager->>AppMenu: Return config
     
     alt No environment configured
@@ -392,7 +392,7 @@ sequenceDiagram
     participant EnvManager
     
     User->>AppMenu: Select "Manage Environment"
-    AppMenu->>ConfigManager: get_project_config(path)
+    AppMenu->>ConfigManager: get_config(path)
     ConfigManager->>AppMenu: Return config
     
     alt Has environment config

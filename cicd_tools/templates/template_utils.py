@@ -96,7 +96,7 @@ def detect_template_type(project_dir: Path) -> Optional[str]:
         Template type or None if not detected
     """
     # Check if the project was created from a template
-    config_manager = ConfigManager.get_project_config(project_dir)
+    config_manager = ConfigManager.get_config(project_dir)
     template_config = config_manager.get("template")
     
     if template_config and "name" in template_config:

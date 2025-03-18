@@ -211,7 +211,7 @@ def test_template_manager_create_project():
             assert (destination / ".app_cache" / "config.yaml").exists()
             
             # Check that the template information was saved
-            config_manager = ConfigManager.get_project_config(destination)
+            config_manager = ConfigManager.get_config(destination)
             template_config = config_manager.get("template")
             
             assert template_config is not None
@@ -238,7 +238,7 @@ def test_detect_template_type():
         project_dir.mkdir()
         
         # Create project configuration
-        config_manager = ConfigManager.get_project_config(project_dir)
+        config_manager = ConfigManager.get_config(project_dir)
         config_manager.set("template", {
             "name": "template1",
             "version": "0.1.0",
