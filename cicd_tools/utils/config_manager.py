@@ -132,7 +132,7 @@ class ConfigManager:
         This method adds default values for missing configuration entries.
         """
         default_config = {
-            "environment": {"capture_output": True},  # Enabled by default
+            "console": {"capture_output": True},  # Enabled by default
             "logging": {
                 "default": {
                     "level": "INFO",

@@ -179,7 +179,7 @@ def test_template_manager_create_project():
         
         # Create config.yaml.jinja in .app_cache
         with open(app_cache_dir / "config.yaml.jinja", "w", encoding="utf-8") as f:
-            f.write('environment:\n  capture_output: true\n\nlogging:\n  default:\n    level: INFO')
+            f.write('console:\n  capture_output: true\n\nlogging:\n  default:\n    level: INFO')
         
         # Create destination directory
         destination = Path(temp_dir) / "project"
@@ -221,7 +221,7 @@ def test_template_manager_create_project():
             assert template_config["variables"]["license"] == "MIT"
             
             # Check that the environment configuration was set up
-            env_config = config_manager.get("environment")
+            env_config = config_manager.get("console")
             assert env_config is not None
             assert env_config.get("capture_output") is True
         except RuntimeError as e:

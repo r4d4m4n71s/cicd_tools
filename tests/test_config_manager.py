@@ -159,6 +159,6 @@ def test_config_manager_setup_default_config():
         config_manager.setup_default_config()
         
         # Check that default values were set
-        assert config_manager.get("environment", {}).get("capture_output") is True
+        assert config_manager.get("console", {}).get("capture_output") is True
         assert "logging" in config_manager.get_all()
         assert "styling" in config_manager.get_all()

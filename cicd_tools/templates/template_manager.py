@@ -259,33 +259,9 @@ class TemplateManager:
                 config_manager = ConfigManager(config_path)
                 
                 # Set up default configuration
-                config_manager.setup_default_config()
-                
-                # Add project-specific settings
-                project_name = destination.name
-                config_manager.set("logging", {
-                    "default": {
-                        "level": "INFO",
-                        "handlers": [
-                            {
-                                "type": "console",
-                                "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-                            },
-                            {
-                                "type": "file",
-                                "filename": f"logs/{project_name.replace('-', '_')}.log",
-                                "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-                                "max_bytes": 10485760,
-                                "backup_count": 3
-                            }
-                        ]
-                    }
-                })
-                
-                # Ensure capture_output is enabled by default
-                config_manager.set("environment", {"capture_output": True})
-                
+                config_manager.setup_default_config()                               
                 print(f"Set up default configuration in {config_path}")
+                
         except Exception as e:
             print(f"Warning: Failed to set up example module configuration: {e}")
     

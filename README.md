@@ -178,7 +178,7 @@ CICD Tools uses a centralized configuration system located in `.app_cache/config
 
 - **Environment Settings**
   ```yaml
-  environment:
+  console:
     capture_output: true  # Enable progress bars for long-running operations (default: true)
   ```
 

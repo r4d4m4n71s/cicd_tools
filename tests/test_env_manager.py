@@ -131,10 +131,13 @@ def test_run_with_progress():
         app_cache_dir.mkdir()
         
         with open(app_cache_dir / "config.yaml", "w") as f:
-            f.write("environment:\n  capture_output: true\n")
+            f.write("console:\n  capture_output: true\n")
+        
+        # Configure the environment before using it
+        project.configure_environment('virtual', '.venv')
         
         # Test run method with progress tracking
-        result = project.run("python", "--version")
+        result = project.env_manager.get_runner().run("python", "--version")
         
         # Check that the command was executed successfully
         assert result.returncode == 0

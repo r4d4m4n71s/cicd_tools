@@ -5,11 +5,12 @@ This module provides the abstract base class for all project types.
 """
 
 from abc import ABC, abstractmethod
+import subprocess
 from pathlib import Path
 from typing import Dict, List, Any, Optional
 
 # Import EnvManager directly from env_manager
-from env_manager import EnvManager, ProgressRunner
+from env_manager import EnvManager, ProgressRunner, IRunner
 from cicd_tools.utils.config_manager import ConfigManager
 
 
@@ -29,44 +30,36 @@ class BaseProject(ABC):
             project_path: Path to the project directory
         """
         self.project_path = project_path
-        self._env_manager = None
+        self.env_manager:EnvManager = None
         
-    def get_env_manager(self) -> EnvManager:
+    def create_env_manager(self, env_path, clear = False):
+         # Initialize environment manager with the project path
+        env_manager = EnvManager(env_path, clear)
+        # Replace it with our custom method
+        env_manager.get_runner = lambda: self._custom_runner()
+        return env_manager
+    
+    def _custom_runner(self) -> IRunner:
         """
-        Get or create an environment manager for this project.
+        Customize runner according to configuration.
         
         Returns:
-            An environment manager instance
+            A customized runner instance
         """
-        if self._env_manager is None:
-            # Initialize environment manager with the project path
-            self._env_manager = EnvManager(self.project_path)
-        return self._env_manager
-        
-    def run(self, *cmd_args) -> str:
-        """
-        Run a command with progress tracking.
-        
-        Args:
-            *cmd_args: Command arguments
-            
-        Returns:
-            Command output
-        """
-        env_manager = self.get_env_manager()
         config_manager = ConfigManager.get_config(self.project_path)
-        capture_output = config_manager.get("environment", {}).get("capture_output", True)
+        capture_output = config_manager.get("console", {}).get("capture_output", True)
         
-        if capture_output:
-            try:
-                # Set inline_output to 10 to show the last 10 lines of output during execution
-                return ProgressRunner(inline_output=1).with_env(env_manager).run(*cmd_args)
-            except ImportError:
-                # Fall back to regular run if progress_runner is not available
-                return env_manager.get_runner().run(*cmd_args)
+        if capture_output and self.env_manager is not None:
+            # Set inline_output to 1 to show the last line of output during execution
+            return ProgressRunner(inline_output=1).with_env(self.env_manager)            
+        elif self.env_manager is not None:
+            # Use the original get_runner method from the EnvManager instance
+            original_get_runner = self.env_manager.__class__.get_runner
+            return original_get_runner(self.env_manager)
         else:
-            # Run directly without progress tracking
-            return env_manager.get_runner().run(*cmd_args)
+            # Return a default runner if _env_manager is not initialized yet
+            # This should not happen in normal operation
+            return lambda *args, **kwargs: subprocess.run(args, **kwargs)
         
     @abstractmethod
     def get_menus(self) -> List[Dict[str, Any]]:
@@ -85,7 +78,7 @@ class BaseProject(ABC):
         Returns:
             A dictionary with environment configuration
         """
-        env_manager = self.get_env_manager()
+        env_manager = self.env_manager
         return {
             "name": env_manager.env.name,
             "root": str(env_manager.env.root),
@@ -103,7 +96,7 @@ class BaseProject(ABC):
         """
         if env_type == 'current':
             # Use the current Python environment
-            self._env_manager = EnvManager()
+            self.env_manager = self.create_env_manager(None)
         elif env_type == 'virtual':
             # Use a virtual environment
             if env_name:
@@ -112,4 +105,7 @@ class BaseProject(ABC):
                 venv_path = self.project_path / '.venv'
             
             # Create the virtual environment if it doesn't exist
-            self._env_manager = EnvManager(venv_path, clear=False)
+            self.env_manager = self.create_env_manager(venv_path)
+
+        config_manager = ConfigManager.get_config(self.project_path)    
+        config_manager.set("environment", {"type": env_type, "path": self.env_manager.env.root})    

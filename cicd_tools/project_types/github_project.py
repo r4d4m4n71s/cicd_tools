@@ -14,7 +14,7 @@ from typing import Dict, List, Any, Optional, Tuple
 import questionary
 
 from cicd_tools.project_types.base_project import BaseProject
-from cicd_tools.utils.env_manager import EnvManager
+from env_manager import PackageManager 
 from cicd_tools.templates.template_manager import TemplateManager
 
 
@@ -88,8 +88,7 @@ class GitHubProject(BaseProject):
             True if installation was successful, False otherwise
         """
         try:
-            env_manager = self.get_env_manager()
-            env_manager.run("pip", "install", "-e", ".[dev]", capture_output = False)
+            self.env_manager.get_runner().run("pip", "install", "-e", ".[dev]", capture_output = False)
             print("Successfully installed.")
             return True
         except Exception as e:
@@ -113,15 +112,13 @@ class GitHubProject(BaseProject):
                     "With coverage"
                 ]
             ).ask()
-            
-            env_manager = self.get_env_manager()
-            
+                        
             if test_option == "All tests":
-                env_manager.run("pytest", "--tb=short", "-v", capture_output = False)
+                self.env_manager.get_runner().run("pytest", "--tb=short", "-v", capture_output = False)
             elif test_option == "Failed tests only":
-                env_manager.run("pytest", "--tb=short", "-v", "--last-failed", capture_output = False)
+                self.env_manager.get_runner().run("pytest", "--tb=short", "-v", "--last-failed", capture_output = False)
             elif test_option == "With coverage":
-                env_manager.run("pytest", "--tb=short", "-v", "--cov", capture_output = False)
+                self.env_manager.get_runner().run("pytest", "--tb=short", "-v", "--cov", capture_output = False)
             
             print("Test finished.")   
             return True
@@ -146,16 +143,15 @@ class GitHubProject(BaseProject):
             ).ask()
             
         try:
-            env_manager = self.get_env_manager()
             
             # Install pre-commit if needed
             self._install_if_needed("pre-commit")
             
             if action == "on":
-                env_manager.run("pre-commit", "install")
+                self.env_manager.get_runner().run("pre-commit", "install")
                 print("Pre-commit hooks enabled")
             else:
-                env_manager.run("pre-commit", "uninstall")
+                self.env_manager.get_runner().run("pre-commit", "uninstall")
                 print("Pre-commit hooks disabled")
                 
             return True
@@ -177,7 +173,6 @@ class GitHubProject(BaseProject):
             url = questionary.text("Enter repository URL:").ask()
             
         try:
-            env_manager = self.get_env_manager()
             
             # Extract repository name from URL
             repo_name = url.split("/")[-1]
@@ -188,7 +183,7 @@ class GitHubProject(BaseProject):
             destination = self.project_path / repo_name
             
             # Clone the repository
-            env_manager.run("git", "clone", url, str(destination))
+            self.env_manager.get_runner().run("git", "clone", url, str(destination))
             
             # Update the project with template if needed
             template_name = questionary.select(
@@ -214,7 +209,6 @@ class GitHubProject(BaseProject):
             True if pulling was successful, False otherwise
         """
         try:
-            env_manager = self.get_env_manager()
             
             # Check if the project is a git repository
             if not (self.project_path / ".git").exists():
@@ -222,7 +216,7 @@ class GitHubProject(BaseProject):
                 return False
                 
             # Pull changes
-            env_manager.run("git", "pull")
+            self.env_manager.get_runner().run("git", "pull")
             
             print("Changes pulled successfully")
             return True
@@ -237,9 +231,8 @@ class GitHubProject(BaseProject):
         Returns:
             True if pushing was successful, False otherwise
         """
-        try:
-            env_manager = self.get_env_manager()
-            
+        try:\
+                    
             # Check if the project is a git repository
             if not (self.project_path / ".git").exists():
                 print("Not a git repository")
@@ -247,7 +240,7 @@ class GitHubProject(BaseProject):
                 
             # Check if there are changes to commit
             try:
-                status = env_manager.run("git", "status", "--porcelain", capture_output=True)
+                status = self.env_manager.run("git", "status", "--porcelain", capture_output=True)
                 if not status.stdout.strip():
                     print("No changes to commit")
                     return True
@@ -258,13 +251,13 @@ class GitHubProject(BaseProject):
             commit_message = questionary.text("Enter commit message:").ask()
             
             # Add changes
-            env_manager.run("git", "add", ".")
+            self.env_manager.get_runner().run("git", "add", ".")
             
             # Commit changes
-            env_manager.run("git", "commit", "-m", commit_message)
+            self.env_manager.get_runner().run("git", "commit", "-m", commit_message)
             
             # Push changes
-            env_manager.run("git", "push")
+            self.env_manager.get_runner().run("git", "push")
             
             print("Changes pushed successfully")
             return True
@@ -315,12 +308,10 @@ class GitHubProject(BaseProject):
         
         Args:
             package: Package to install
-        """
-        env_manager = self.get_env_manager()
-        
+        """        
         try:
             # Check if the package is installed
-            env_manager.run("pip", "show", package, capture_output=True)
+            self.env_manager.get_runner().run("pip", "show", package, capture_output=True)
         except Exception:
             # Package is not installed, install it
-            env_manager.install_pkg(package)
+            PackageManager(self.env_manager.get_runner()).install(package)

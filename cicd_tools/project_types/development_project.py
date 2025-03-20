@@ -12,10 +12,8 @@ from pathlib import Path
 from typing import Dict, List, Any, Optional, Tuple
 
 import questionary
-
 from cicd_tools.project_types.base_project import BaseProject
-from cicd_tools.utils.env_manager import EnvManager
-
+from env_manager import PackageManager
 
 class DevelopmentProject(BaseProject):
     """
@@ -82,8 +80,7 @@ class DevelopmentProject(BaseProject):
             True if installation was successful, False otherwise
         """
         try:
-            env_manager = self.get_env_manager()
-            env_manager.run("pip", "install", "-e", ".[dev]", capture_output = False)
+            self.env_manager.get_runner().run("pip", "install", "-e", ".[dev]", capture_output = False)
             print("Successfully installed.")            
             return True
         except Exception as e:
@@ -107,15 +104,13 @@ class DevelopmentProject(BaseProject):
                     "With coverage"
                 ]
             ).ask()
-            
-            env_manager = self.get_env_manager()
-            
+                        
             if test_option == "All tests":
-                env_manager.run("pytest", "--tb=short", "-v", capture_output = False)
+                self.env_manager.get_runner().run("pytest", "--tb=short", "-v", capture_output = False)
             elif test_option == "Failed tests only":
-                env_manager.run("pytest", "--tb=short", "-v", "--last-failed", capture_output = False)
+                self.env_manager.get_runner().run("pytest", "--tb=short", "-v", "--last-failed", capture_output = False)
             elif test_option == "With coverage":
-                env_manager.run("pytest", "--tb=short", "-v", "--cov", capture_output = False)
+                self.env_manager.get_runner().run("pytest", "--tb=short", "-v", "--cov", capture_output = False)
             
             print("Test finished.")     
             return True
@@ -140,16 +135,15 @@ class DevelopmentProject(BaseProject):
             ).ask()
             
         try:
-            env_manager = self.get_env_manager()
             
             # Install pre-commit if needed
             self._install_if_needed("pre-commit")
             
             if action == "on":
-                env_manager.run("pre-commit", "install")
+                self.env_manager.get_runner().run("pre-commit", "install")
                 print("Pre-commit hooks enabled")
             else:
-                env_manager.run("pre-commit", "uninstall")
+                self.env_manager.get_runner().run("pre-commit", "uninstall")
                 print("Pre-commit hooks disabled")
                 
             return True
@@ -174,7 +168,6 @@ class DevelopmentProject(BaseProject):
             ).ask()
             
         try:
-            env_manager = self.get_env_manager()
             
             # Install required packages
             self._install_if_needed("build")
@@ -185,14 +178,14 @@ class DevelopmentProject(BaseProject):
             
             # Bump version
             if release_type == "prod":
-                env_manager.run("bump2version", "patch", capture_output = False)
+                self.env_manager.get_runner().run("bump2version", "patch", capture_output = False)
             else:
                 # Get current version
                 current_version = self._get_current_version()
-                env_manager.run("bump2version", "patch", "--new-version", f"{current_version}.beta", capture_output = False)
+                self.env_manager.get_runner().run("bump2version", "patch", "--new-version", f"{current_version}.beta", capture_output = False)
                 
             # Build the project
-            env_manager.run("python", "-m", "build")
+            self.env_manager.get_runner().run("python", "-m", "build")
             
             # Prepare release directory
             self._prepare_release_directory(release_type)
@@ -220,7 +213,6 @@ class DevelopmentProject(BaseProject):
             ).ask()
             
         try:
-            env_manager = self.get_env_manager()
             
             # Install twine if needed
             self._install_if_needed("twine")
@@ -233,7 +225,7 @@ class DevelopmentProject(BaseProject):
                     print("No production release found. Create a production release first.")
                     return False
                     
-                env_manager.run("twine", "upload", "dist/release/*")
+                self.env_manager.get_runner().run("twine", "upload", "dist/release/*")
             else:
                 # Check if beta release exists
                 beta_dir = self.project_path / "dist" / "beta"
@@ -241,7 +233,7 @@ class DevelopmentProject(BaseProject):
                     print("No beta release found. Create a beta release first.")
                     return False
                     
-                env_manager.run("twine", "upload", "--repository", "testpypi", "dist/beta/*")
+                self.env_manager.get_runner().run("twine", "upload", "--repository", "testpypi", "dist/beta/*")
                 
             print(f"Deployment to {target} successful")
             return True
@@ -293,36 +285,34 @@ class DevelopmentProject(BaseProject):
         Args:
             package: Package to install
         """
-        env_manager = self.get_env_manager()
         
         try:
             # Check if the package is installed
-            env_manager.run("pip", "show", package)
+            self.env_manager.get_runner().run("pip", "show", package)
         except Exception:
             # Package is not installed, install it
-            env_manager.install_pkg(package)
+            PackageManager(self.env_manager.get_runner()).install(package)
             
     def _configure_git_for_release(self) -> None:
         """Configure git for release."""
         # Check if git is configured
         try:
-            env_manager = self.get_env_manager()
-            
+
             # Check if git user name is configured
             try:
-                env_manager.run("git", "config", "user.name", capture_output=False)
+                self.env_manager.get_runner().run("git", "config", "user.name", capture_output=False)
             except Exception:
                 # Configure git user name
                 name = questionary.text("Enter git user name:").ask()
-                env_manager.run("git", "config", "user.name", name)
+                self.env_manager.get_runner().run("git", "config", "user.name", name)
                 
             # Check if git user email is configured
             try:
-                env_manager.run("git", "config", "user.email", capture_output=False)
+                self.env_manager.get_runner().run("git", "config", "user.email", capture_output=False)
             except Exception:
                 # Configure git user email
                 email = questionary.text("Enter git user email:").ask()
-                env_manager.run("git", "config", "user.email", email)
+                self.env_manager.get_runner().run("git", "config", "user.email", email)
                 
         except Exception as e:
             print(f"Git configuration failed: {e}")

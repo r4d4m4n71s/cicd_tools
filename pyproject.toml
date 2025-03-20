@@ -31,8 +31,7 @@ dependencies = [
     "pyyaml>=6.0",
     "click>=8.0.0",
     "python-env-manager>=0.1.0",
-    "rich>=13.0.0",
-    "progress-runner>=0.1.0",
+    "rich>=13.0.0"
 ]
 
 [project.optional-dependencies]

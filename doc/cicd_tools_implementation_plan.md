@@ -50,7 +50,7 @@ CICD_TOOLS_CACHE_FILE = '.app_cache/config.yaml'  # Update path
 
 ### 1.2 Expand Configuration Schema
 
-**Task:** Expand the configuration schema to include logging and environment settings with capture_output enabled by default.
+**Task:** Expand the configuration schema to include logging and console settings with capture_output enabled by default.
 
 **Implementation Details:**
 ```yaml
@@ -93,7 +93,7 @@ def get_logger_config(self, name: str = "default"):
 def setup_default_config(self):
     """Set up default configuration if not present."""
     default_config = {
-        "environment": {"capture_output": True},  # Enabled by default
+        "console": {"capture_output": True},  # Enabled by default
         "logging": {
             "default": {
                 "level": "INFO",
@@ -157,9 +157,8 @@ def run_with_progress(self, *cmd_args):
     Returns:
         Command output
     """
-    env_manager = self.get_env_manager()
     config_manager = ConfigManager.get_config(self.project_path)
-    capture_output = config_manager.get("environment", {}).get("capture_output", True)
+    capture_output = config_manager.get("console", {}).get("capture_output", True)
     
     if capture_output:
         # Use progress_runner with inline_output parameter
@@ -631,7 +630,7 @@ def _setup_example_module(self, destination: Path, template_name: str):
     config_path = app_cache_dir / 'config.yaml'
     if not config_path.exists():
         default_config = {
-            "environment": {"capture_output": True},
+            "console": {"capture_output": True},
             "logging": {
                 "default": {
                     "level": "INFO",

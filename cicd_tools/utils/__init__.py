@@ -6,7 +6,5 @@ This package provides utility functions for CICD Tools, including:
 - Configuration management: For project configuration
 """
 
-from cicd_tools.utils.env_manager import EnvManager, Environment
 from cicd_tools.utils.config_manager import ConfigManager
-
 __all__ = ["EnvManager", "Environment", "ConfigManager"]

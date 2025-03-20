@@ -6,7 +6,7 @@ with minimal functionality.
 """
 
 from pathlib import Path
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any
 
 from cicd_tools.project_types.base_project import BaseProject
 
@@ -71,11 +71,11 @@ class SimpleProject(BaseProject):
         """
         try:
             # Use run_with_progress instead of direct env_manager.run
-            self.run("pip", "install", "-e", ".")
-            print("Successfully installed.")
+            self.env_manager.get_runner().run("pip", "install", "-e", ".")
+            print("Project successfully installed.")
             return True
         except Exception as e:
-            print(f"Installation failed: {e}")
+            print(f"Project installation failed: {e}")
             return False
             
     def test(self) -> bool:
@@ -87,7 +87,7 @@ class SimpleProject(BaseProject):
         """
         try:
             # Use run_with_progress instead of direct env_manager.run
-            self.run("python", "-m", "unittest", "discover")
+            self.env_manager.run("python", "-m", "unittest", "discover")
             print("Test finished.")
             return True
         except Exception as e:

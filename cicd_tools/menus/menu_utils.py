@@ -132,7 +132,7 @@ class Menu:
         for i, action in enumerate(self.actions):
             icon_text = f"{action.icon} " if action.icon else ""
             choices.append(Choice(
-                title=f"{icon_text}{action.name} - {action.description}",
+                title=f"{icon_text} {action.name} - {action.description}",
                 value=i
             ))
         

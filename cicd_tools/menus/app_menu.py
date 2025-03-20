@@ -43,7 +43,7 @@ class AppMenu:
         project_type = self._detect_project_type(project_dir)
         
         if project_type is None:
-            print(f"Could not detect project type for {project_dir}, try to create a new project using create cmd")
+            print(f"{project_dir} is not a valid project directory")
             return
             
         # Create project instance
@@ -131,13 +131,11 @@ class AppMenu:
             
             if env_type == "Current":
                 # Use current environment
-                project.configure_environment("current")
-                config_manager.set("environment", {"type": "current"})
+                project.configure_environment("current")                
             else:
                 # Create new virtual environment
                 env_name = ask_for_input("Enter environment name:", ".venv")
-                project.configure_environment("virtual", env_name)
-                config_manager.set("environment", {"type": "virtual", "name": env_name})
+                project.configure_environment("virtual", env_name)                
                 
             # Install project
             project.install()
@@ -166,8 +164,8 @@ class AppMenu:
         if env_config["type"] == "virtual":
             # Add actions for virtual environment with icons
             menu.add_action(MenuAction(
-                "Recreate Environment",
-                "Recreate the virtual environment",
+                f"Recreate Environment {Path(env_config["path"]).name}",
+                "Recomended in case of files curruption problems or starting from scratch",
                 self._recreate_environment,
                 icon="🔄",
                 project=project,
@@ -175,8 +173,8 @@ class AppMenu:
             ))
             
             menu.add_action(MenuAction(
-                "Delete Environment",
-                "Delete the virtual environment",
+                f"Delete Environment {Path(env_config["path"]).name}",
+                "Removing physical environment folders",
                 self._delete_environment,
                 icon="🗑️",
                 project=project,
@@ -185,7 +183,7 @@ class AppMenu:
             
         menu.add_action(MenuAction(
             "Create New Environment",
-            "Create a new virtual environment",
+            "Use for install dependencies and project execution",
             self._create_environment,
             icon="➕",
             project=project,
@@ -210,16 +208,19 @@ class AppMenu:
             
         if not confirm_action("Are you sure you want to recreate the virtual environment?"):
             return
-            
+
+        env_name = Path(env_config["path"]).name
+        print(f"Recreating {env_name} ...")            
+
         try:
             # Get environment manager
-            env_manager = project.get_env_manager()
+            env_manager = project.create_env_manager(env_config["path"])
             
             # Remove environment
             env_manager.remove()
             
             # Create new environment
-            project.configure_environment("virtual", env_config["name"])
+            project.configure_environment("virtual", env_name)
             
             # Install project
             project.install()
@@ -247,7 +248,7 @@ class AppMenu:
             
         try:
             # Get environment manager
-            env_manager = project.get_env_manager()
+            env_manager = project.create_env_manager(env_config["path"])
             
             # Remove environment
             env_manager.remove()
@@ -267,7 +268,7 @@ class AppMenu:
             project: Project instance
             config_manager: Configuration manager
         """
-        env_name = ask_for_input("Enter environment name:", project.project_path.name)
+        env_name = ask_for_input("Enter environment name:", ".venv")
         
         if not env_name:
             return
@@ -275,10 +276,7 @@ class AppMenu:
         try:
             # Configure environment
             project.configure_environment("virtual", env_name)
-            
-            # Update configuration
-            config_manager.set("environment", {"type": "virtual", "name": env_name})
-            
+                        
             # Install project
             project.install()
             

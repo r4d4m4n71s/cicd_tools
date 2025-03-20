@@ -34,7 +34,7 @@ def test_base_project_init():
         project = TestBaseProject(Path(temp_dir))
         
         assert project.project_path == Path(temp_dir)
-        assert project._env_manager is None
+        assert project.env_manager is None
 
 
 def test_base_project_get_menus():
@@ -56,7 +56,7 @@ def test_simple_project_init():
         project = SimpleProject(Path(temp_dir))
         
         assert project.project_path == Path(temp_dir)
-        assert project._env_manager is None
+        assert project.env_manager is None
 
 
 def test_simple_project_get_menus():
@@ -79,7 +79,7 @@ def test_development_project_init():
         project = DevelopmentProject(Path(temp_dir))
         
         assert project.project_path == Path(temp_dir)
-        assert project._env_manager is None
+        assert project.env_manager is None
 
 
 def test_development_project_get_menus():
@@ -104,7 +104,7 @@ def test_github_project_init():
         project = GitHubProject(Path(temp_dir))
         
         assert project.project_path == Path(temp_dir)
-        assert project._env_manager is None
+        assert project.env_manager is None
 
 
 def test_github_project_get_menus():
