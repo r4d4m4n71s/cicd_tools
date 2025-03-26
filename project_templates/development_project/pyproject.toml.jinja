@@ -10,11 +10,13 @@ readme = "README.md"
 authors = [
     {name = "{{ author_name }}", email = "{{ author_email }}"}
 ]
-license = {text = "{{ license }}"}
+license = "{{ license }}"
+{% if use_github_repo == "yes" %}
+urls = {Homepage = "https://github.com/{{ github_username }}/{{ github_repo }}"}
+{% endif %}
 classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: {{ python_version }}",
-    "License :: OSI Approved :: {{ license }} License",
     "Operating System :: OS Independent",
     "Development Status :: 3 - Alpha",
 ]
@@ -23,40 +25,79 @@ dependencies = [
     # Add your package dependencies here
 ]
 
+# Development dependencies
+# These are conditionally included based on your project configuration choices
 [project.optional-dependencies]
 dev = [
-    "pytest>=7.0.0",
-    "pytest-cov>=4.0.0",
-    "black>=23.0.0",
-    "isort>=5.0.0",
-    "mypy>=1.0.0",
-    "pre-commit>=3.0.0",
+    # Standard development tools
     "bump2version>=1.0.0",
     "build>=0.10.0",
     "twine>=4.0.0",
+    {%- if enable_testing == "yes" %}
+    # Pytest: A powerful testing framework that simplifies test writing with its concise syntax.
+    # It offers features like fixtures, parameterization, and plugins that make testing more
+    # efficient and maintainable compared to the standard unittest library.
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    {%- endif %}
+    {%- if code_analysis_tools == "yes" %}
+    # Black: An opinionated code formatter that automatically formats your code to a consistent style.
+    # It eliminates debates about formatting by enforcing a single, deterministic style,
+    # saving time and mental energy during code reviews.
+    "black>=23.0.0",
+    # Isort: Automatically organizes and formats your Python imports according to PEP 8 guidelines.
+    # It groups imports by type, sorts them alphabetically, and removes duplicates,
+    # making your code more readable and maintainable.
+    "isort>=5.0.0",
+    # Mypy: A static type checker that helps catch type-related errors before runtime.
+    # It enhances code reliability, improves documentation through type annotations,
+    # and provides better IDE support for code navigation and refactoring.
+    "mypy>=1.0.0",
+    # Pre-commit: Hooks that automatically check your code before each commit,
+    # catching issues like formatting errors, linting problems, and security vulnerabilities
+    # early in development. This ensures consistent code quality across your project.
+    "pre-commit>=3.0.0",
+    # Ruff: A fast Python linter that checks for common errors and enforces style conventions.
+    "ruff>=0.0.262"
+    {%- endif %}
 ]
 
 [tool.setuptools]
-packages = ["{{ project_name.replace('-', '_') }}"]
+packages = ["{{ project_name.replace('-', '_') }}_module"]
 
+{% if code_analysis_tools == "yes" %}
+# Black: An opinionated code formatter that automatically formats your code to a consistent style.
+# It eliminates debates about formatting by enforcing a single, deterministic style,
+# saving time and mental energy during code reviews.
 [tool.black]
 line-length = 88
 target-version = ["py{{ python_version.replace('.', '') }}"]
 
+# Isort: Automatically organizes and formats your Python imports according to PEP 8 guidelines.
+# It groups imports by type, sorts them alphabetically, and removes duplicates,
+# making your code more readable and maintainable.
 [tool.isort]
 profile = "black"
 line_length = 88
 
+# Mypy: A static type checker that helps catch type-related errors before runtime.
+# It enhances code reliability, improves documentation through type annotations,
+# and provides better IDE support for code navigation and refactoring.
 [tool.mypy]
 python_version = "{{ python_version }}"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
 disallow_incomplete_defs = true
+{% endif %}{% if enable_testing == "yes" %}
 
+# Pytest: A powerful testing framework that simplifies test writing with its concise syntax.
+# It offers features like fixtures, parameterization, and plugins that make testing more
+# efficient and maintainable compared to the standard unittest library.
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = "test_*.py"
 python_functions = "test_*"
 python_classes = "Test*"
 addopts = "--cov={{ project_name.replace('-', '_') }} --cov-report=term-missing"
+{% endif %}

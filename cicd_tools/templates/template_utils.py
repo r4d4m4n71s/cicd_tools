@@ -102,16 +102,17 @@ def detect_template_type(project_dir: Path) -> Optional[str]:
     if template_config and "name" in template_config:
         return template_config["name"]
         
+    return detect_type(project_dir)
+
+
+def detect_type(project_dir: Path) -> Optional[str]:
     # Try to detect based on project structure
-    if _is_github_project(project_dir):
-        return "github_project"
-    elif _is_development_project(project_dir):
+    if _is_development_project(project_dir):
         return "development_project"
     elif _is_simple_project(project_dir):
         return "simple_project"
         
     return None
-
 
 def get_template_info(
     template_name: str,
@@ -158,7 +159,8 @@ def get_template_info(
                 "description": value.get("help", ""),
                 "default": value.get("default", ""),
                 "type": value.get("type", "str"),
-                "choices": value.get("choices", [])
+                "choices": value.get("choices", []),
+                "when": value.get("when", "")
             }
             
     return info
@@ -197,8 +199,9 @@ def _is_simple_project(project_dir: Path) -> bool:
     Returns:
         True if the project is a simple project, False otherwise
     """
-    # Simple projects typically have a setup.py file
-    return (project_dir / "setup.py").exists()
+    # Simple projects typically have a setup.py file or a README.md file
+    # We check for README.md as a fallback since it's likely to exist in most projects
+    return (project_dir / "setup.py").exists() or (project_dir / "README.md").exists()
 
 
 def _is_development_project(project_dir: Path) -> bool:
@@ -211,22 +214,6 @@ def _is_development_project(project_dir: Path) -> bool:
     Returns:
         True if the project is a development project, False otherwise
     """
-    # Development projects typically have a pyproject.toml file and a .pre-commit-config.yaml file
-    return (
-        (project_dir / "pyproject.toml").exists() and
-        (project_dir / ".pre-commit-config.yaml").exists()
-    )
-
-
-def _is_github_project(project_dir: Path) -> bool:
-    """
-    Check if a project is a GitHub project.
-    
-    Args:
-        project_dir: Project directory
-        
-    Returns:
-        True if the project is a GitHub project, False otherwise
-    """
-    # GitHub projects typically have a .github directory
-    return (project_dir / ".github").is_dir()
+    # Development projects typically have a pyproject.toml file
+    # We don't check for .pre-commit-config.yaml because it might be removed if code_analysis_tools is 'no'
+    return (project_dir / "pyproject.toml").exists()

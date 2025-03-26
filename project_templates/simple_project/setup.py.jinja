@@ -9,11 +9,11 @@ setup(
     author="{{ author_name }}",
     author_email="{{ author_email }}",
     url="https://github.com/{{ author_name.lower().replace(' ', '') }}/{{ project_name }}",
+    license="{{ license }}",
     packages=find_packages(),
     classifiers=[
         "Development Status :: 3 - Alpha",
         "Intended Audience :: Developers",
-        "License :: OSI Approved :: {{ license }} License",
         "Programming Language :: Python :: {{ python_version }}",
         "Programming Language :: Python :: 3",
     ],

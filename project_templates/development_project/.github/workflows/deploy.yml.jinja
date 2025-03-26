@@ -1,3 +1,6 @@
+{% if use_github_actions == "yes" %}
+# GitHub Actions provides automated workflows for testing, building, and deploying your code.
+# It integrates directly with your GitHub repository and offers free minutes for public repositories.
 name: Deploy
 
 on:
@@ -58,3 +61,4 @@ jobs:
         TWINE_PASSWORD: ${{ '{{' }} secrets.PYPI_PASSWORD {{ '}}' }}
       run: |
         twine upload dist/release/*
+{% endif %}

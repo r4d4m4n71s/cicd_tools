@@ -183,4 +183,14 @@ def test_ask_for_selection(mock_select):
     result = ask_for_selection("Select option:", ["Option 1", "Option 2", "Option 3"])
     
     assert result == "Option 2"
-    mock_select.assert_called_once_with("Select option:", choices=["Option 1", "Option 2", "Option 3"])
+    mock_select.assert_called_once_with("Select option:", choices=["Option 1", "Option 2", "Option 3"], default=None)
+    
+    # Reset mock
+    mock_select.reset_mock()
+    
+    # Test with default value
+    mock_select.return_value.ask.return_value = "Option 1"
+    result = ask_for_selection("Select option:", ["Option 1", "Option 2", "Option 3"], default="Option 1")
+    
+    assert result == "Option 1"
+    mock_select.assert_called_once_with("Select option:", choices=["Option 1", "Option 2", "Option 3"], default="Option 1")

@@ -1,4 +1,18 @@
+# This file is generated for your project with code analysis tools
+# You can modify this file directly, but changes may be overwritten if you regenerate the project
+
+{% if code_analysis_tools == "yes" %}
 repos:
+# Ruff is a fast Python linter that checks for common errors and enforces style conventions.
+-   repo: https://github.com/charliermarsh/ruff-pre-commit
+    rev: 'v0.0.262'
+    hooks:
+    -   id: ruff
+        args: [--fix, --exit-non-zero-on-fix]
+
+# Pre-commit hooks automatically check your code before each commit, catching issues like
+# formatting errors, linting problems, and security vulnerabilities early in development.
+# This ensures consistent code quality across your project.
 -   repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.4.0
     hooks:
@@ -9,26 +23,30 @@ repos:
     -   id: check-toml
     -   id: debug-statements
 
+# Black is an opinionated code formatter that automatically formats your code to a consistent style.
+# It eliminates debates about formatting by enforcing a single, deterministic style,
+# saving time and mental energy during code reviews.
 -   repo: https://github.com/psf/black
     rev: 23.3.0
     hooks:
     -   id: black
         language_version: python{{ python_version }}
 
+# Isort automatically organizes and formats your Python imports according to PEP 8 guidelines.
+# It groups imports by type, sorts them alphabetically, and removes duplicates,
+# making your code more readable and maintainable.
 -   repo: https://github.com/pycqa/isort
     rev: 5.12.0
     hooks:
     -   id: isort
         name: isort (python)
 
--   repo: https://github.com/charliermarsh/ruff-pre-commit
-    rev: 'v0.0.262'
-    hooks:
-    -   id: ruff
-        args: [--fix, --exit-non-zero-on-fix]
-
+# Mypy is a static type checker that helps catch type-related errors before runtime.
+# It enhances code reliability, improves documentation through type annotations,
+# and provides better IDE support for code navigation and refactoring.
 -   repo: https://github.com/pre-commit/mirrors-mypy
     rev: v1.3.0
     hooks:
     -   id: mypy
         additional_dependencies: [types-requests]
+{% endif %}

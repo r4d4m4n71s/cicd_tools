@@ -312,7 +312,7 @@ Configuration management provides persistent storage for project settings, templ
 The enhanced configuration system now includes:
 - Centralized configuration in `.app_cache/config.yaml`
 - Logger configuration with multiple output targets
-- Environment command execution parameters with capture_output enabled by default
+- Environment command execution parameters with stack_trace flag disabled by default
 - Menu styling configuration
 
 ## 4. Key Workflows
@@ -446,12 +446,12 @@ sequenceDiagram
     actor User
     User->>AppMenu: Select Build option
     AppMenu->>SimpleProject: build()
-    SimpleProject->>ConfigManager: Check capture_output flag
-    alt capture_output enabled
+    SimpleProject->>ConfigManager: Check stack_trace flag
+    alt stack_trace disabled
         SimpleProject->>MenuUtils: show_progress_bar("Building project...")
-        SimpleProject->>EnvManager: run("python", "setup.py", "build", capture_output=True)
+        SimpleProject->>EnvManager: run("python", "setup.py", "build", capture_output=False)
         SimpleProject->>MenuUtils: update_progress()
-    else capture_output disabled
+    else stack_trace enabled
         SimpleProject->>EnvManager: run("python", "setup.py", "build", capture_output=False)
     end
     SimpleProject->>AppMenu: Return operation status
@@ -728,7 +728,7 @@ jobs:
 9. ⏳ Replace {{ project_name.replace('-', '_') }} with sample_module
 10. ⏳ Add example modules with logging to all templates
 11. ⏳ Implement centralized configuration in .app_cache
-12. ⏳ Configure capture_output flag (enabled by default)
+12. ⏳ Configure stack_trace flag (disabled by default)
 13. ⏳ Develop progress bar display for captured output
 14. ⏳ Implement GitHub workflow configurations
 15. ⏳ Write comprehensive tests and documentation
@@ -763,7 +763,7 @@ The `.app_cache/config.yaml` will have the following structure:
 ```yaml
 # Environment configuration
 environment:
-  capture_output: true  # Controls whether to capture command output and show progress bar (enabled by default)
+  stack_trace: false  # Controls whether to capture command output and show progress bar (enabled by default)
   
 # Logging configuration
 logging:

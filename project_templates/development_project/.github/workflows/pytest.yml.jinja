@@ -1,3 +1,6 @@
+{% if use_github_actions == "yes" and enable_testing == "yes" and use_github_repo == "yes" %}
+# GitHub Actions provides automated workflows for testing, building, and deploying your code.
+# It integrates directly with your GitHub repository and offers free minutes for public repositories.
 name: Tests
 
 on:
@@ -37,3 +40,12 @@ jobs:
     - name: Run tests
       run: |
         pytest --cov={{ project_name.replace('-', '_') }}
+        
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        token: ${{ '{{' }} secrets.CODECOV_TOKEN {{ '}}' }}
+        fail_ci_if_error: false
+        # The name parameter sets the name of the coverage report in Codecov's dashboard
+        name: {{ project_name }}
+{% endif %}

@@ -1,0 +1,20 @@
+"""
+Tests for the {{ project_name.replace('-', '_') }} module.
+"""
+
+import unittest
+
+from {{ project_name.replace('-', '_') }}.main import process_data
+
+
+class Test{{ project_name.replace('-', '_').title().replace('_', '') }}(unittest.TestCase):
+    """Tests for the {{ project_name.replace('-', '_') }} module."""
+    
+    def test_process_data(self):
+        """Test the process_data function."""
+        self.assertEqual(process_data([1, 2, 3, 4, 5]), 15)
+        self.assertEqual(process_data([10, 20]), 30)
+
+
+if __name__ == "__main__":
+    unittest.main()

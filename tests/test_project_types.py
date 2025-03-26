@@ -11,7 +11,6 @@ import pytest
 from cicd_tools.project_types.base_project import BaseProject
 from cicd_tools.project_types.simple_project import SimpleProject
 from cicd_tools.project_types.development_project import DevelopmentProject
-from cicd_tools.project_types.github_project import GitHubProject
 
 
 class TestBaseProject(BaseProject):
@@ -34,7 +33,7 @@ def test_base_project_init():
         project = TestBaseProject(Path(temp_dir))
         
         assert project.project_path == Path(temp_dir)
-        assert project.env_manager is None
+        assert project._env_manager is None
 
 
 def test_base_project_get_menus():
@@ -56,21 +55,19 @@ def test_simple_project_init():
         project = SimpleProject(Path(temp_dir))
         
         assert project.project_path == Path(temp_dir)
-        assert project.env_manager is None
+        assert project._env_manager is None
 
 
-def test_simple_project_get_menus():
+def test_simple_project_get_menus(simple_project_dir):
     """Test SimpleProject get_menus method."""
-    with tempfile.TemporaryDirectory() as temp_dir:
-        project = SimpleProject(Path(temp_dir))
-        
-        menus = project.get_menus()
-        
-        assert len(menus) == 4
-        assert menus[0]["name"] == "Install"
-        assert menus[1]["name"] == "Test"
-        assert menus[2]["name"] == "Build"
-        assert menus[3]["name"] == "Clean"
+    project = SimpleProject(simple_project_dir)
+    
+    menus = project.get_menus()
+    
+    assert len(menus) == 3
+    assert menus[0]["name"] == "Install"
+    assert menus[1]["name"] == "Build"
+    assert menus[2]["name"] == "Clean"
 
 
 def test_development_project_init():
@@ -79,49 +76,22 @@ def test_development_project_init():
         project = DevelopmentProject(Path(temp_dir))
         
         assert project.project_path == Path(temp_dir)
-        assert project.env_manager is None
+        assert project._env_manager is None
 
 
-def test_development_project_get_menus():
+def test_development_project_get_menus(development_project_dir):
     """Test DevelopmentProject get_menus method."""
-    with tempfile.TemporaryDirectory() as temp_dir:
-        project = DevelopmentProject(Path(temp_dir))
-        
-        menus = project.get_menus()
-        
-        assert len(menus) == 6
-        assert menus[0]["name"] == "Install"
-        assert menus[1]["name"] == "Test"
-        assert menus[2]["name"] == "Prehook"
-        assert menus[3]["name"] == "Release"
-        assert menus[4]["name"] == "Deploy"
-        assert menus[5]["name"] == "Clean"
+    project = DevelopmentProject(development_project_dir)
+    
+    menus = project.get_menus()
+    
+    assert len(menus) == 5
+    assert menus[0]["name"] == "Install"
+    assert menus[1]["name"] == "Build"
+    assert menus[2]["name"] == "Release"
+    assert menus[3]["name"] == "Deploy"
+    assert menus[4]["name"] == "Clean"
 
-
-def test_github_project_init():
-    """Test GitHubProject initialization."""
-    with tempfile.TemporaryDirectory() as temp_dir:
-        project = GitHubProject(Path(temp_dir))
-        
-        assert project.project_path == Path(temp_dir)
-        assert project.env_manager is None
-
-
-def test_github_project_get_menus():
-    """Test GitHubProject get_menus method."""
-    with tempfile.TemporaryDirectory() as temp_dir:
-        project = GitHubProject(Path(temp_dir))
-        
-        menus = project.get_menus()
-        
-        assert len(menus) == 7
-        assert menus[0]["name"] == "Install"
-        assert menus[1]["name"] == "Test"
-        assert menus[2]["name"] == "Prehook"
-        assert menus[3]["name"] == "Clone Repository"
-        assert menus[4]["name"] == "Pull Changes"
-        assert menus[5]["name"] == "Push Changes"
-        assert menus[6]["name"] == "Clean"
 
 
 @pytest.mark.skipif(

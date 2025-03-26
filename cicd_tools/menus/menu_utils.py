@@ -83,7 +83,6 @@ class MenuAction:
         merged_kwargs = {**self.kwargs, **kwargs}
         return self.callback(*args, **merged_kwargs)
 
-
 class Menu:
     """
     Base menu class to display options and handle selection.
@@ -137,7 +136,7 @@ class Menu:
             ))
         
         # Add a back/exit option
-        choices.append(Choice(title="↩️ Back/Exit", value=None))
+        choices.append(Choice(title="↩️  Back/Exit", value=None))
         
         # Show menu and get selection
         result = questionary.select(
@@ -206,7 +205,7 @@ def ask_for_input(message: str, default: Optional[Any] = None) -> str:
     return questionary.text(message, default=default).ask()
 
 
-def ask_for_selection(message: str, choices: List[Union[str, Dict[str, Any]]]) -> Any:
+def ask_for_selection(message: str, choices: List[Union[str, Dict[str, Any]]], default:Optional[Union[str, Choice, Dict[str, Any]]] = None) -> Any:
     """
     Ask the user to select from a list of choices.
     
@@ -231,4 +230,4 @@ def ask_for_selection(message: str, choices: List[Union[str, Dict[str, Any]]]) -
     #         # Convert to string for any other type
     #         formatted_choices.append(str(choice))
     
-    return questionary.select(message, choices=choices).ask()
+    return questionary.select(message, choices=choices, default=default).ask()

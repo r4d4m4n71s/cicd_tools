@@ -4,8 +4,6 @@ Command-line interface for CICD Tools.
 This module provides the main entry point for the CICD Tools CLI.
 """
 
-import os
-import sys
 from pathlib import Path
 
 import click

@@ -3,6 +3,41 @@
 _version: "0.1.0"
 _description: "A Python development project template with CI/CD workflows"
 
+# Template configuration
+_templates_suffix: ".jinja"
+
+# Conditional file exclusion
+_tasks:
+  # Display message if code analysis tools is enabled
+  - >
+    {% if code_analysis_tools == 'yes' %}
+    python -c "print('\n\033[1;32mCode analysis tools have been enabled for your project.\nThese tools will help maintain code quality and consistency.\033[0m\n')"
+    {% endif %}
+
+  # Remove pre-commit config if code analysis is disabled
+  - >
+    {% if code_analysis_tools == 'no' %}
+    python -c "import os; os.remove('.pre-commit-config.yaml') if os.path.exists('.pre-commit-config.yaml') else None"
+    {% endif %}
+  
+  # Remove GitHub Actions workflows if GitHub Actions is not used
+  - >
+    {% if use_github_actions == 'no' %}
+    python -c "import shutil; import os; shutil.rmtree('.github') if os.path.exists('.github') else None"
+    {% endif %}
+  
+  # Remove pytest GitHub Actions workflow if GitHub Actions is used but pytest is not
+  - >
+    {% if use_github_actions == 'yes' and enable_testing == 'no' %}
+    python -c "import os; os.remove('.github/workflows/pytest.yml') if os.path.exists('.github/workflows/pytest.yml') else None"
+    {% endif %}
+  
+  # Remove tests folder if testing is not enabled
+  - >
+    {% if enable_testing == 'no' %}
+    python -c "import shutil; import os; shutil.rmtree('tests') if os.path.exists('tests') else None"
+    {% endif %}
+
 # Project Information
 project_name:
   type: str
@@ -46,34 +81,64 @@ license:
     - "GPL-3.0"
     - "BSD-3-Clause"
 
+# GitHub Configuration
+use_github_repo:
+  type: str
+  help: "Use GitHub repository: Configures the project for GitHub integration, including repository information and workflows."
+  default: "yes"
+  choices:
+    - "yes"
+    - "no"
+
+github_username:
+  type: str
+  help: "GitHub username: Your GitHub username for repository URLs and workflow configurations."
+  default: "username"
+  when: "{{ use_github_repo == 'yes' }}"
+
+github_repo:
+  type: str
+  help: "GitHub repository name: The name of your GitHub repository."
+  default: "{{ project_name }}"
+  when: "{{ use_github_repo == 'yes' }}"
+
 # CI/CD Configuration
 use_github_actions:
-  type: bool
-  help: "Use GitHub Actions for CI/CD"
-  default: true
-
-use_pre_commit:
-  type: bool
-  help: "Use pre-commit hooks"
-  default: true
+  type: str
+  help: "Use GitHub Actions for CI/CD: GitHub Actions provides automated workflows for testing, building, and deploying your code. It integrates directly with your GitHub repository and offers free minutes for public repositories."
+  default: "{{ use_github_repo }}"
+  choices:
+    - "yes"
+    - "no"
+  when: "{{ use_github_repo == 'yes' }}"
 
 # Package Configuration
-use_pytest:
-  type: bool
-  help: "Use pytest for testing"
-  default: true
+enable_testing:
+  type: str
+  help: "Enable testing with pytest: It offers features like fixtures, parameterization, and plugins that make testing more efficient and maintainable compared to the standard unittest library. See more https://docs.pytest.org"
+  default: "yes"
+  choices:
+    - "yes"
+    - "no"
 
-use_mypy:
-  type: bool
-  help: "Use mypy for type checking"
-  default: true
+# Code Quality Tools Configuration
+code_analysis_tools:
+  type: str
+  help: |
+    Enable code analysis tools across pre_commit hooks.
+    
+    - ruff: A fast Python linter that checks for common errors and enforces style conventions
+    - black: An opinionated code formatter that automatically formats your code to a consistent style
+    - isort: Automatically organizes and formats your Python imports according to PEP 8 guidelines
+    - mypy: A static type checker that helps catch type-related errors before runtime
+    - pre_commit: Set up Git pre-commit hooks to automatically run selected tools before each commit
 
-use_black:
-  type: bool
-  help: "Use black for code formatting"
-  default: true
+    These tools runs when project is build or a change is pushed to the repo.
+    For tweaking, or disabling just comment or remove then from .pre-commit-config.yaml file.
+    More information, visit https://pre-commit.com/hooks.html
 
-use_isort:
-  type: bool
-  help: "Use isort for import sorting"
-  default: true
+  default: "{{ 'yes' if use_github_repo == 'yes' else 'no' }}"
+  choices:
+    - "yes"
+    - "no"
+  when: "{{ use_github_repo == 'yes' }}"

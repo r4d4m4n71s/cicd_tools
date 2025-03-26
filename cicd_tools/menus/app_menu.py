@@ -4,19 +4,13 @@ App menu for CICD Tools.
 This module provides the AppMenu class for project-specific operations with enhanced styling.
 """
 
-import os
 from pathlib import Path
 from typing import Dict, Any, Optional, List, Type
 
-import questionary
-from questionary import Choice
-
 from cicd_tools.menus.menu_utils import Menu, MenuAction, confirm_action, ask_for_input, ask_for_selection
-from cicd_tools.menus.menu_utils import display_header, style_text
 from cicd_tools.project_types.base_project import BaseProject
 from cicd_tools.project_types.simple_project import SimpleProject
 from cicd_tools.project_types.development_project import DevelopmentProject
-from cicd_tools.project_types.github_project import GitHubProject
 from cicd_tools.templates.template_utils import detect_template_type
 from cicd_tools.utils.config_manager import ConfigManager
 
@@ -75,16 +69,7 @@ class AppMenu:
                 action["description"],
                 action["callback"],
                 icon=action.get("icon")
-            ))
-            
-        # Add help action with icon
-        menu.add_action(MenuAction(
-            "Help",
-            "Show help for project operations",
-            self._show_help,
-            icon="ℹ️",
-            project=project
-        ))
+            ))                
         
         menu.display()
         
@@ -101,9 +86,7 @@ class AppMenu:
         # Check if the project was created from a template
         template_type = detect_template_type(project_dir)
         
-        if template_type == "github_project":
-            return GitHubProject
-        elif template_type == "development_project":
+        if template_type == "development_project":
             return DevelopmentProject
         elif template_type == "simple_project":
             return SimpleProject
@@ -135,6 +118,8 @@ class AppMenu:
             else:
                 # Create new virtual environment
                 env_name = ask_for_input("Enter environment name:", ".venv")
+                
+                print(f"Creating {env_name} ...")                                 
                 project.configure_environment("virtual", env_name)                
                 
             # Install project
@@ -272,8 +257,11 @@ class AppMenu:
         
         if not env_name:
             return
-            
+        
+        print(f"Creating {env_name} ...") 
+
         try:
+                       
             # Configure environment
             project.configure_environment("virtual", env_name)
                         
@@ -283,52 +271,3 @@ class AppMenu:
             print("Environment created successfully")
         except Exception as e:
             print(f"Failed to create environment: {e}")
-            
-    def _show_help(self, project: BaseProject) -> None:
-        """
-        Show help for project operations.
-        
-        Args:
-            project: Project instance
-        """
-        from rich.console import Console
-        from rich.panel import Panel
-        from rich.table import Table
-        
-        console = Console()
-        project_type = project.__class__.__name__
-        
-        # Create a styled header
-        display_header(f"Help for {project_type}", "Available Operations")
-        
-        # Create a table for operations
-        table = Table(show_header=True, header_style="bold blue")
-        table.add_column("Operation", style="bold")
-        table.add_column("Description")
-        
-        if project_type == "SimpleProject":
-            table.add_row("📥 Install", "Install the project")
-            table.add_row("🧪 Test", "Run tests")
-            table.add_row("🏗️ Build", "Build the project")
-            table.add_row("🧹 Clean", "Clean build artifacts")
-        elif project_type == "DevelopmentProject":
-            table.add_row("📥 Install", "Install the project with development dependencies")
-            table.add_row("🧪 Test", "Run tests")
-            table.add_row("🔄 Prehook", "Configure pre-commit hooks")
-            table.add_row("📦 Release", "Create a release")
-            table.add_row("🚀 Deploy", "Deploy the project")
-            table.add_row("🧹 Clean", "Clean build artifacts")
-        elif project_type == "GitHubProject":
-            table.add_row("📥 Install", "Install the project with development dependencies")
-            table.add_row("🧪 Test", "Run tests")
-            table.add_row("🔄 Prehook", "Configure pre-commit hooks")
-            table.add_row("📋 Clone Repository", "Clone a GitHub repository")
-            table.add_row("⬇️ Pull Changes", "Pull changes from the remote repository")
-            table.add_row("⬆️ Push Changes", "Push changes to the remote repository")
-            table.add_row("🧹 Clean", "Clean build artifacts")
-        else:
-            console.print("[bold red]No help available for this project type[/bold red]")
-            return
-            
-        # Display the table
-        console.print(table)

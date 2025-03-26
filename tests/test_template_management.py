@@ -148,10 +148,6 @@ def test_get_template_info():
         assert info["variables"]["license"]["choices"] == ["MIT", "Apache-2.0", "GPL-3.0"]
 
 
-@pytest.mark.skipif(
-    "GITHUB_ACTIONS" in os.environ or not shutil.which("copier"),
-    reason="Skip template operations in CI or if copier is not installed"
-)
 def test_template_manager_create_project():
     """Test TemplateManager create_project method."""
     with tempfile.TemporaryDirectory() as temp_dir:
@@ -179,7 +175,7 @@ def test_template_manager_create_project():
         
         # Create config.yaml.jinja in .app_cache
         with open(app_cache_dir / "config.yaml.jinja", "w", encoding="utf-8") as f:
-            f.write('console:\n  capture_output: true\n\nlogging:\n  default:\n    level: INFO')
+            f.write('console:\n  stack_trace: false\n\nlogging:\n  default:\n    level: INFO')
         
         # Create destination directory
         destination = Path(temp_dir) / "project"
@@ -223,12 +219,66 @@ def test_template_manager_create_project():
             # Check that the environment configuration was set up
             env_config = config_manager.get("console")
             assert env_config is not None
-            assert env_config.get("capture_output") is True
+            assert env_config.get("stack_trace") is False
         except RuntimeError as e:
             if "Copier execution failed" in str(e):
                 pytest.skip("Copier execution failed, skipping test")
             else:
                 raise
+
+
+def test_get_template_defaults_with_jinja_syntax():
+    """Test that _get_template_defaults correctly handles default values with Jinja2 template syntax."""
+    with tempfile.TemporaryDirectory() as temp_dir:
+        templates_dir = Path(temp_dir) / "templates"
+        templates_dir.mkdir()
+        
+        # Create a test template with default values containing Jinja2 template syntax
+        template_path = templates_dir / "template_with_jinja"
+        template_path.mkdir(parents=True)
+        
+        # Create copier.yaml with default values containing Jinja2 template syntax
+        with open(template_path / "copier.yaml", "w", encoding="utf-8") as f:
+            yaml.dump({
+                "_version": "0.1.0",
+                "_description": "Test template with Jinja2 syntax in default values",
+                "project_name": {
+                    "type": "str",
+                    "help": "Project name",
+                    "default": "test-project"
+                },
+                "author": {
+                    "type": "str",
+                    "help": "Author name",
+                    "default": "Test Author"
+                },
+                "github_repo": {
+                    "type": "str",
+                    "help": "GitHub repository name",
+                    "default": "{{ project_name }}"
+                },
+                "use_github_actions": {
+                    "type": "str",
+                    "help": "Use GitHub Actions",
+                    "default": "{{ 'yes' if use_github_repo == 'yes' else 'no' }}"
+                }
+            }, f)
+        
+        # Create a TemplateManager instance
+        template_manager = TemplateManager(templates_dir)
+        
+        # Call the _get_template_defaults method
+        defaults = template_manager._get_template_defaults(template_path)
+        
+        # Verify that default values with Jinja2 template syntax are not included
+        assert "project_name" in defaults
+        assert "author" in defaults
+        assert "github_repo" not in defaults
+        assert "use_github_actions" not in defaults
+        
+        # Verify that normal default values are included
+        assert defaults["project_name"] == "test-project"
+        assert defaults["author"] == "Test Author"
 
 
 def test_detect_template_type():
@@ -237,13 +287,22 @@ def test_detect_template_type():
         project_dir = Path(temp_dir) / "project"
         project_dir.mkdir()
         
+        # Create files to make it a valid project directory
+        (project_dir / "setup.py").touch()
+        (project_dir / "README.md").touch()
+        
+        # Create .app_cache directory for configuration
+        app_cache_dir = project_dir / ".app_cache"
+        app_cache_dir.mkdir()
+        
         # Create project configuration
-        config_manager = ConfigManager.get_config(project_dir)
+        config_manager = ConfigManager(app_cache_dir / "config.yaml")
         config_manager.set("template", {
             "name": "template1",
             "version": "0.1.0",
             "variables": {}
         })
+        config_manager.save_config()
         
         # Detect template type
         template_type = detect_template_type(project_dir)
@@ -252,16 +311,12 @@ def test_detect_template_type():
         
         # Test detection based on project structure
         config_manager.delete("template")
+        config_manager.save_config()
         
-        # Simple project
-        (project_dir / "setup.py").touch()
+        # Simple project (already has setup.py)
         assert detect_template_type(project_dir) == "simple_project"
         
         # Development project
         (project_dir / "pyproject.toml").touch()
         (project_dir / ".pre-commit-config.yaml").touch()
         assert detect_template_type(project_dir) == "development_project"
-        
-        # GitHub project
-        (project_dir / ".github").mkdir()
-        assert detect_template_type(project_dir) == "github_project"

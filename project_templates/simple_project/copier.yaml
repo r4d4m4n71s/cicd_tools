@@ -3,6 +3,22 @@
 _version: "0.1.0"
 _description: "A simple Python project template with basic structure"
 
+# Template configuration
+_templates_suffix: ".jinja"
+
+# Conditional file exclusion
+_tasks:
+  # Remove tests folder if pytest is not used
+  - >
+    {% if enable_testing == 'no' %}
+    python -c "import shutil; import os; shutil.rmtree('tests') if os.path.exists('tests') else None"
+    {% endif %}
+  
+  # Ensure the project directory is properly initialized
+  # This is necessary for project detection to work correctly
+  - >
+    python -c "import os; os.makedirs('.app_cache', exist_ok=True)"
+
 # Project Information
 project_name:
   type: str
@@ -45,3 +61,12 @@ license:
     - "Apache-2.0"
     - "GPL-3.0"
     - "BSD-3-Clause"
+
+# Package Configuration
+enable_testing:
+  type: str
+  help: "Enable testing with pytest: Pytest is a powerful testing framework that simplifies test writing with its concise syntax. It offers features like fixtures, parameterization, and plugins that make testing more efficient and maintainable compared to the standard unittest library."
+  default: "yes"
+  choices:
+    - "yes"
+    - "no"

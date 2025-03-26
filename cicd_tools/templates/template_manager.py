@@ -4,17 +4,64 @@ Template management for CICD Tools.
 This module provides functionality for managing project templates using Copier.
 """
 
-import os
-import shutil
-import subprocess
 from pathlib import Path
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, Generator
 from datetime import datetime
-
+import tempfile
+import shutil
+import contextlib
+from cicd_tools.templates.template_utils import detect_type
 import yaml
+from copier import run_copy
 
 from cicd_tools.utils.config_manager import ConfigManager
 
+
+@contextlib.contextmanager
+def temp_template(template_path: Path, processed_answers: Dict[str, Any]) -> Generator[Path, None, None]:
+    """
+    Context manager for creating a temporary template with default values replaced by processed answers.
+    
+    Args:
+        template_path: Path to the original template
+        processed_answers: Processed template variables
+        
+    Yields:
+        Path to the temporary template
+    """
+    # Create a temporary directory for the modified template
+    temp_dir = tempfile.mkdtemp()
+    temp_template_path = Path(temp_dir) / template_path.name
+    
+    try:
+        # Copy the original template to the temporary directory
+        shutil.copytree(template_path, temp_template_path)
+        
+        # Update the template configuration with the processed answers as defaults
+        for config_name in ["copier.yaml", "copier.yml"]:
+            config_path = temp_template_path / config_name
+            if config_path.exists():
+                with open(config_path, "r", encoding="utf-8") as f:
+                    config = yaml.safe_load(f)
+                
+                # Update default values with processed answers
+                for key, value in processed_answers.items():
+                    if key in config and isinstance(config[key], dict) and "default" in config[key]:
+                        default_value = config[key]["default"]
+                        # Skip default values that contain Jinja2 template syntax
+                        if not (isinstance(default_value, str) and "{{" in default_value and "}}" in default_value):
+                            config[key]["default"] = value
+                
+                # Write the updated configuration back to the file
+                with open(config_path, "w", encoding="utf-8") as f:
+                    yaml.dump(config, f, sort_keys=False)
+                
+                break
+        
+        yield temp_template_path
+    finally:
+        # Clean up the temporary directory
+        shutil.rmtree(temp_dir)
 
 class TemplateManager:
     """
@@ -76,22 +123,32 @@ class TemplateManager:
             raise ValueError(f"Template '{template_name}' not found")
             
         # Process template variables
-        processed_vars = self._process_template_variables(template_name, variables)
-        
+        processed_answers = self._process_template_variables(template_name, destination, variables)
+        data ={'current_year':datetime.now().year}
+
         # Create the project using Copier
         try:
             # Ensure the destination directory exists
             destination.parent.mkdir(parents=True, exist_ok=True)
             
-            # Run Copier to create the project
-            self._run_copier("copy", template_path, destination, processed_vars)
+            # If processed_answers are not empty, create a temporary template with default values replaced
+            if processed_answers:
+                with temp_template(template_path, processed_answers) as temp_template_path:
+                    # Run Copier to create the project using the temporary template
+                    answers = self._run_copier(temp_template_path, destination, data=data)
+            else:
+                # Run Copier to create the project using the original template
+                answers = self._run_copier(template_path, destination, data=data)
+            
+            # Merge the user's answers with the processed variables
+            merged_vars = {**processed_answers, **answers}
             
             # Save template information in project configuration
             config_manager = ConfigManager.get_config(destination)
             config_manager.set("template", {
                 "name": template_name,
                 "version": self._get_template_version(template_path),
-                "variables": processed_vars
+                "variables": merged_vars
             })
             
             # Set up example module and default configuration
@@ -101,6 +158,11 @@ class TemplateManager:
             raise RuntimeError(f"Failed to create project: {e}") from e
             
     def is_project_from_template(self, dir: Path) -> Dict[str, Any]:        
+        
+        # Check if the directory is a project directory
+        if not detect_type(dir):
+            return False        
+
         config_manager = ConfigManager.get_config(dir)     
         template_config = config_manager.get("template")        
         return template_config and "name" in template_config        
@@ -133,25 +195,32 @@ class TemplateManager:
         
         if not template_path.exists():
             raise ValueError(f"Template '{template_name}' not found")
-            
-        # Merge existing variables with new ones
-        existing_vars = template_config.get("variables", {})
-        merged_vars = {**existing_vars, **variables}
-        
+                    
         # Process template variables
-        processed_vars = self._process_template_variables(template_name, merged_vars)
+        processed_answers = self._process_template_variables(template_name, project_dir, variables)
         
+        data ={'current_year':datetime.now().year}
+
         # Update the project using Copier
         try:
-            # Run Copier to update the project
-            self._run_copier("update", project_dir, destination=template_path, processed_vars=processed_vars)
+            # If processed_answers are not empty, create a temporary template with default values replaced
+            if processed_answers:
+                with temp_template(template_path, processed_answers) as temp_template_path:
+                    # Run Copier to create the project using the temporary template
+                    answers = self._run_copier(temp_template_path, project_dir, data=data)
+            else:
+                # Run Copier to create the project using the original template
+                answers = self._run_copier(template_path, project_dir, data=data)
+
+            # Merge the user's answers with the processed variables
+            merged_vars = {**processed_answers, **answers}
             
             # Update template information in project configuration
             config_manager = ConfigManager.get_config(project_dir)
             config_manager.set("template", {
                 "name": template_name,
                 "version": self._get_template_version(template_path),
-                "variables": processed_vars
+                "variables": merged_vars
             })
             
             # Set up example module and default configuration
@@ -163,7 +232,8 @@ class TemplateManager:
     def _process_template_variables(
         self,
         template_name: str,
-        variables: Dict[str, Any]
+        config_path: Optional[Path],
+        variables: Dict[str, Any]        
     ) -> Dict[str, Any]:
         """
         Process template variables.
@@ -171,23 +241,56 @@ class TemplateManager:
         Args:
             template_name: Name of the template
             variables: Template variables
+            config_path: Config path to check for existing template variables
             
         Returns:
             Processed template variables
         """
         # Get default variables from template
-        template_path = self.templates_dir / template_name
-        defaults = self._get_template_defaults(template_path)
+        defaults = self.get_project_defaults(config_path)
         
+        # If no stored template variables in app congfig then
+        # extract defaults from the template configuration
+        if not defaults:
+            template_path = self.templates_dir / template_name    
+            defaults = self._get_template_defaults(template_path)
+
         # Add current year for templates
         current_year = datetime.now().year
         
         # Merge defaults with provided variables and add current_year
         return {**defaults, **variables, "current_year": current_year}
+
+    @staticmethod    
+    def get_project_defaults(config_path: Path) -> Dict[str, Any]:
+        """
+        Get default variables from a template.
+        
+        Args:
+            template_path: Path to the template
+            config_path: config path to check for existing template variables
+            
+        Returns:
+            Default template variables
+        """
+        defaults = {}
+        
+        # First, check if there are any stored template variables in the config_manager
+        if config_path is not None and config_path.exists():
+            try:
+                config_manager = ConfigManager.get_config(config_path)
+                template_config = config_manager.get("template")
+                if template_config and "variables" in template_config:
+                    # Use stored template variables as defaults
+                    defaults = template_config["variables"]                    
+            except Exception as e:
+                print(f"Warning: Failed to get stored template variables: {e}")
+                    
+        return defaults
         
     def _get_template_defaults(self, template_path: Path) -> Dict[str, Any]:
         """
-        Get default variables from a template.
+        Get default values from a template configuration.
         
         Args:
             template_path: Path to the template
@@ -195,25 +298,26 @@ class TemplateManager:
         Returns:
             Default template variables
         """
-        copier_yaml_path = template_path / "copier.yml"
-        copier_yaml_alt_path = template_path / "copier.yaml"
+        answers = {}
         
-        if copier_yaml_path.exists():
-            with open(copier_yaml_path, "r", encoding="utf-8") as f:
-                config = yaml.safe_load(f)
-        elif copier_yaml_alt_path.exists():
-            with open(copier_yaml_alt_path, "r", encoding="utf-8") as f:
-                config = yaml.safe_load(f)
-        else:
-            return {}
-            
-        # Extract default values from questions
-        defaults = {}
-        for key, value in config.items():
-            if isinstance(value, dict) and "default" in value:
-                defaults[key] = value["default"]
-                
-        return defaults
+        # Read the template configuration
+        for config_name in ["copier.yaml", "copier.yml"]:
+            config_path = template_path / config_name
+            if config_path.exists():
+                with open(config_path, "r", encoding="utf-8") as f:
+                    config = yaml.safe_load(f)                        
+                # Extract questions from the config
+                for key, value in config.items():
+                    if isinstance(value, dict) and "type" in value and not key.startswith("_"):
+                        # This is a question, add it to the answers with its default value
+                        if "default" in value:
+                            default_value = value["default"]
+                            # Skip default values that contain Jinja2 template syntax
+                            if not (isinstance(default_value, str) and "{{" in default_value and "}}" in default_value):
+                                answers[key] = default_value
+                break
+        
+        return answers
         
     def _get_template_version(self, template_path: Path) -> str:
         """
@@ -259,19 +363,16 @@ class TemplateManager:
                 config_manager = ConfigManager(config_path)
                 
                 # Set up default configuration
-                config_manager.setup_default_config()                               
-                print(f"Set up default configuration in {config_path}")
-                
+                config_manager.setup_default_config()                                                               
         except Exception as e:
             print(f"Warning: Failed to set up example module configuration: {e}")
     
     def _run_copier(
         self,
-        command: str,
-        source_or_destination: Path,
+        template_path: Path,
         destination: Optional[Path] = None,
-        processed_vars: Optional[Dict[str, Any]] = None
-    ) -> None:
+        data: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
         """
         Run Copier with the specified command.
         
@@ -281,69 +382,38 @@ class TemplateManager:
         
         Args:
             command: Copier command ('copy' or 'update')
-            source_or_destination: Source template path (for 'copy') or destination project path (for 'update')
-            destination: Destination project path (for 'copy') or template path (for 'update')
-            processed_vars: Processed template variables
+            template_path: Source template path (for 'copy')
+            destination: Destination project path (for 'copy') by defaul '.'
+            data: data replacement for questions
             
         Raises:
             ValueError: If required parameters are missing or the command is invalid
             RuntimeError: If Copier execution fails
-        """
-        # Validate parameters
-        if destination is None:
-            raise ValueError(f"Destination is required for '{command}' command")
             
-        # Build the base command
-        cmd = ["copier", "copy"]
+        Returns:
+            Dict containing the user's answers
+        """                
+        # Prepare data dictionary from processed variables
+        data = data or {}
         
-        # Configure command based on operation type
-        if command == "copy":
-            # For initial project creation: template -> destination
-            src_path = str(source_or_destination)
-            dest_path = str(destination)
-            interactive = False
-            options = ["--force", "--quiet"]
-        elif command == "update":
-            # For project updates: template -> project
-            src_path = str(destination)  # Template path
-            dest_path = str(source_or_destination)  # Project path
-            interactive = True
-            options = ["--force"]  # Only force, no quiet to allow interaction
-        else:
-            raise ValueError(f"Invalid Copier command: {command}")
-            
-        # Add source and destination paths
-        cmd.extend([src_path, dest_path])
+        # Define the answers file path
+        #answers_file_path = dst_path / "copier-answers.yml"
         
-        # Add template variables if provided
-        if processed_vars:
-            for key, value in processed_vars.items():
-                cmd.extend(["--data", f"{key}={value}"])
-                
-        # Add command options
-        cmd.extend(options)
-        
-        # Run Copier with appropriate settings based on interactive mode
         try:
-            if interactive:
-                # For interactive updates, use the parent process's stdin/stdout/stderr
-                # This allows direct user interaction with Copier's prompts
-                subprocess.run(
-                    cmd,
-                    check=True,
-                    stdin=None,  # Use parent's stdin for input
-                    stdout=None,  # Use parent's stdout for output
-                    stderr=None,  # Use parent's stderr for errors
-                    text=True
-                )
+            # Run Copier using the Python API
+            worker = run_copy(
+                src_path=str(template_path),
+                dst_path=str(destination),
+                data=data,
+                unsafe=True  # Equivalent to --trust
+            )
+            
+            # Extract answers from the Worker object
+            if hasattr(worker, 'answers') and hasattr(worker.answers, 'user'):
+                return worker.answers.user            
             else:
-                # For non-interactive operations, capture output
-                subprocess.run(
-                    cmd,
-                    check=True,
-                    capture_output=True,
-                    text=True
-                )
-        except subprocess.CalledProcessError as e:
-            error_message = e.stderr if e.stderr else e.stdout if e.stdout else str(e)
-            raise RuntimeError(f"Copier execution failed: {error_message}") from e
+                # Fall back to extracting defaults from the template configuration
+                return self._get_template_defaults(template_path)
+                
+        except Exception as e:
+            raise RuntimeError(f"Copier execution failed: {str(e)}") from e

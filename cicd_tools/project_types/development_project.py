@@ -5,17 +5,16 @@ This module provides the DevelopmentProject class, which represents an advanced 
 with development capabilities.
 """
 
-import os
-import re
 import shutil
 from pathlib import Path
-from typing import Dict, List, Any, Optional, Tuple
+from typing import Dict, List, Any, Optional
 
 import questionary
 from cicd_tools.project_types.base_project import BaseProject
-from env_manager import PackageManager
+from cicd_tools.project_types.mixins import GitMixin, VersionManagerMixin
+from cicd_tools.utils.config_manager import ConfigManager
 
-class DevelopmentProject(BaseProject):
+class DevelopmentProject(GitMixin, VersionManagerMixin, BaseProject):
     """
     Development project type with advanced capabilities.
     
@@ -39,118 +38,71 @@ class DevelopmentProject(BaseProject):
         Returns:
             A list of menu action dictionaries
         """
-        return [
-            {
-                "name": "Install",
-                "description": "Install the project with development dependencies",
-                "callback": self.install
-            },
-            {
-                "name": "Test",
-                "description": "Run tests",
-                "callback": self.test
-            },
-            {
+        common_menus = self.get_common_menu_items()
+        
+        # Get configuration
+        config_manager = ConfigManager.get_config(self.project_path)
+        
+        # Add Development-specific menu items
+        dev_menus = []
+        
+        # Add Prehook menu item if code analysis tools are enabled
+        code_analysis_tools = config_manager.get("code_analysis_tools", "no")
+        
+        if code_analysis_tools == "yes":
+            dev_menus.append({
                 "name": "Prehook",
-                "description": "Configure pre-commit hooks",
-                "callback": self.prehook
-            },
+                "description": "Configure pre-commit hooks to automatically check code quality before commits, ensuring consistent standards and preventing issues from being committed",
+                "callback": self.prehook,
+                "icon": "🔄"
+            })
+        
+        # Release and Deploy are core features of the development project
+        dev_menus.extend([
             {
                 "name": "Release",
-                "description": "Create a release",
-                "callback": self.release
+                "description": "Create a versioned release package for distribution, including version bumping, building artifacts, and preparing release directories for beta or production",
+                "callback": self.release,
+                "icon": "🚀"
             },
             {
                 "name": "Deploy",
-                "description": "Deploy the project",
-                "callback": self.deploy
-            },
-            {
-                "name": "Clean",
-                "description": "Clean build artifacts",
-                "callback": self.clean
+                "description": "Deploy the project to test or production environments, uploading packages to PyPI or TestPyPI repositories for distribution to end users",
+                "callback": self.deploy,
+                "icon": "📦"
             }
-        ]
+        ])
         
-    def install(self) -> bool:
-        """
-        Install the project with development dependencies.
+        # Insert Development menus after Build
+        build_index = next((i for i, item in enumerate(common_menus) if item["name"] == "Build"), -1)
+        if build_index != -1:
+            return common_menus[:build_index+1] + dev_menus + common_menus[build_index+1:]
+        else:
+            return common_menus + dev_menus
         
-        Returns:
-            True if installation was successful, False otherwise
+    # Common methods are inherited from BaseProject
+    # Git-related methods are inherited from GitMixin
+    # Version management methods are inherited from VersionManagerMixin
+
+    # overrided methods
+    def build(self) -> bool:
         """
-        try:
-            self.env_manager.get_runner().run("pip", "install", "-e", ".[dev]", capture_output = False)
-            print("Successfully installed.")            
-            return True
-        except Exception as e:
-            print(f"Installation failed: {e}")
-            return False
-            
-    def test(self) -> bool:
-        """
-        Run tests.
+        Build the project.
         
         Returns:
-            True if tests passed, False otherwise
-        """
+            True if build was successful, False otherwise
+        """      
         try:
-            # Ask for test options
-            test_option = questionary.select(
-                "Select test option:",
-                choices=[
-                    "All tests",
-                    "Failed tests only",
-                    "With coverage"
-                ]
-            ).ask()
-                        
-            if test_option == "All tests":
-                self.env_manager.get_runner().run("pytest", "--tb=short", "-v", capture_output = False)
-            elif test_option == "Failed tests only":
-                self.env_manager.get_runner().run("pytest", "--tb=short", "-v", "--last-failed", capture_output = False)
-            elif test_option == "With coverage":
-                self.env_manager.get_runner().run("pytest", "--tb=short", "-v", "--cov", capture_output = False)
-            
-            print("Test finished.")     
+            # Build the project using pyproject.toml instead of setup.py
+            self.run("python", "-m", "build", "--outdir", str(self.project_path / "build"))
+            #self.run("python", "-m", "build")
+            print("✅ Build finished.")
             return True
         except Exception as e:
-            print(f"Tests failed: {e}")
+            print(f"❌ Build failed: {e}")
             return False
-            
-    def prehook(self, action: Optional[str] = None) -> bool:
-        """
-        Configure pre-commit hooks.
-        
-        Args:
-            action: Action to perform ('on' or 'off')
-            
-        Returns:
-            True if configuration was successful, False otherwise
-        """
-        if action is None:
-            action = questionary.select(
-                "Select pre-commit hook action:",
-                choices=["on", "off"]
-            ).ask()
-            
-        try:
-            
-            # Install pre-commit if needed
-            self._install_if_needed("pre-commit")
-            
-            if action == "on":
-                self.env_manager.get_runner().run("pre-commit", "install")
-                print("Pre-commit hooks enabled")
-            else:
-                self.env_manager.get_runner().run("pre-commit", "uninstall")
-                print("Pre-commit hooks disabled")
-                
-            return True
-        except Exception as e:
-            print(f"Pre-commit hook configuration failed: {e}")
-            return False
-            
+    # end overrided methods
+
     def release(self, release_type: Optional[str] = None) -> bool:
         """
         Create a release.
@@ -178,22 +130,22 @@ class DevelopmentProject(BaseProject):
             
             # Bump version
             if release_type == "prod":
-                self.env_manager.get_runner().run("bump2version", "patch", capture_output = False)
+                self.run("bump2version", "patch", capture_output = False)
             else:
                 # Get current version
                 current_version = self._get_current_version()
-                self.env_manager.get_runner().run("bump2version", "patch", "--new-version", f"{current_version}.beta", capture_output = False)
+                self.run("bump2version", "patch", "--new-version", f"{current_version}.beta", capture_output = False)
                 
             # Build the project
-            self.env_manager.get_runner().run("python", "-m", "build")
+            self.run("python", "-m", "build")
             
             # Prepare release directory
             self._prepare_release_directory(release_type)
             
-            print(f"Release created successfully ({release_type})")
+            print(f"✅ Release created successfully ({release_type})")
             return True
         except Exception as e:
-            print(f"Release creation failed: {e}")
+            print(f"❌ Release creation failed: {e}")
             return False
             
     def deploy(self, target: Optional[str] = None) -> bool:
@@ -222,128 +174,25 @@ class DevelopmentProject(BaseProject):
                 # Check if production release exists
                 release_dir = self.project_path / "dist" / "release"
                 if not release_dir.exists() or not list(release_dir.glob("*")):
-                    print("No production release found. Create a production release first.")
+                    print("⚠️ No production release found. Create a production release first.")
                     return False
                     
-                self.env_manager.get_runner().run("twine", "upload", "dist/release/*")
+                self.run("twine", "upload", "dist/release/*")
             else:
                 # Check if beta release exists
                 beta_dir = self.project_path / "dist" / "beta"
                 if not beta_dir.exists() or not list(beta_dir.glob("*")):
-                    print("No beta release found. Create a beta release first.")
+                    print("⚠️ No beta release found. Create a beta release first.")
                     return False
                     
-                self.env_manager.get_runner().run("twine", "upload", "--repository", "testpypi", "dist/beta/*")
+                self.run("twine", "upload", "--repository", "testpypi", "dist/beta/*")
                 
-            print(f"Deployment to {target} successful")
+            print(f"✅ Deployment to {target} successful")
             return True
         except Exception as e:
-            print(f"Deployment failed: {e}")
+            print(f"❌ Deployment failed: {e}")
             return False
-            
-    def clean(self) -> bool:
-        """
-        Clean build artifacts.
-        
-        Returns:
-            True if cleaning was successful, False otherwise
-        """
-        try:
-            # Remove build directory
-            build_dir = self.project_path / "build"
-            if build_dir.exists():
-                import shutil
-                shutil.rmtree(build_dir)
-                if build_dir.exists():
-                   print("Unable to delete build folder.") 
-                
-            # Remove dist directory
-            dist_dir = self.project_path / "dist"
-            if dist_dir.exists():
-                import shutil
-                shutil.rmtree(dist_dir)
-                if dist_dir.exists():
-                   print("Unable to delete dist folder.") 
-                
-            # Remove egg-info directory
-            for egg_info_dir in self.project_path.glob("*.egg-info"):
-                import shutil
-                shutil.rmtree(egg_info_dir)
-                if egg_info_dir.exists():
-                   print("Unable to delete egg-info folder.") 
-                
-            print("Build artifacts cleaned successfully")
-            return True
-        except Exception as e:
-            print(f"Cleaning failed: {e}")
-            return False
-            
-    def _install_if_needed(self, package: str) -> None:
-        """
-        Install a package if it's not already installed.
-        
-        Args:
-            package: Package to install
-        """
-        
-        try:
-            # Check if the package is installed
-            self.env_manager.get_runner().run("pip", "show", package)
-        except Exception:
-            # Package is not installed, install it
-            PackageManager(self.env_manager.get_runner()).install(package)
-            
-    def _configure_git_for_release(self) -> None:
-        """Configure git for release."""
-        # Check if git is configured
-        try:
-
-            # Check if git user name is configured
-            try:
-                self.env_manager.get_runner().run("git", "config", "user.name", capture_output=False)
-            except Exception:
-                # Configure git user name
-                name = questionary.text("Enter git user name:").ask()
-                self.env_manager.get_runner().run("git", "config", "user.name", name)
-                
-            # Check if git user email is configured
-            try:
-                self.env_manager.get_runner().run("git", "config", "user.email", capture_output=False)
-            except Exception:
-                # Configure git user email
-                email = questionary.text("Enter git user email:").ask()
-                self.env_manager.get_runner().run("git", "config", "user.email", email)
-                
-        except Exception as e:
-            print(f"Git configuration failed: {e}")
-            
-    def _get_current_version(self) -> str:
-        """
-        Get the current version of the project.
-        
-        Returns:
-            Current version
-        """
-        # Try to get version from .bumpversion.cfg
-        bumpversion_cfg = self.project_path / ".bumpversion.cfg"
-        if bumpversion_cfg.exists():
-            with open(bumpversion_cfg, "r", encoding="utf-8") as f:
-                content = f.read()
-                match = re.search(r'current_version\s*=\s*([^\s]+)', content)
-                if match:
-                    return match.group(1)
-                    
-        # Try to get version from pyproject.toml
-        pyproject_toml = self.project_path / "pyproject.toml"
-        if pyproject_toml.exists():
-            with open(pyproject_toml, "r", encoding="utf-8") as f:
-                content = f.read()
-                match = re.search(r'version\s*=\s*"([^"]+)"', content)
-                if match:
-                    return match.group(1)
-                    
-        # Default version
-        return "0.1.0"
+                               
         
     def _prepare_release_directory(self, release_type: str) -> None:
         """

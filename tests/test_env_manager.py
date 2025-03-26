@@ -123,21 +123,28 @@ def test_run_with_progress():
             return []
     
     with tempfile.TemporaryDirectory() as temp_dir:
+        # Create a valid project directory structure
+        project_dir = Path(temp_dir)
+        
+        # Create files to make it a valid project directory
+        (project_dir / "setup.py").touch()
+        (project_dir / "README.md").touch()
+        
         # Create test project
-        project = TestProject(Path(temp_dir))
+        project = TestProject(project_dir)
         
         # Create .app_cache directory and config.yaml
-        app_cache_dir = Path(temp_dir) / ".app_cache"
+        app_cache_dir = project_dir / ".app_cache"
         app_cache_dir.mkdir()
         
         with open(app_cache_dir / "config.yaml", "w") as f:
-            f.write("console:\n  capture_output: true\n")
+            f.write("console:\n  stack_trace: false\n")
         
         # Configure the environment before using it
         project.configure_environment('virtual', '.venv')
         
         # Test run method with progress tracking
-        result = project.env_manager.get_runner().run("python", "--version")
+        result = project._env_manager.get_runner().run("python", "--version")
         
         # Check that the command was executed successfully
         assert result.returncode == 0

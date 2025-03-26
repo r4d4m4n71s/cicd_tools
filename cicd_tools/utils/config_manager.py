@@ -9,8 +9,12 @@ import logging
 import shutil
 from pathlib import Path
 from typing import Dict, Any, Optional, Union, List
-
 import yaml
+
+
+class NotAProjectDirectoryError(Exception):
+    """Raised when an operation requires a project directory but the path is not a valid project."""
+    pass
 
 CICD_TOOLS_CACHE_FILE = '.app_cache/config.yaml'
 
@@ -53,7 +57,12 @@ class ConfigManager:
         Save configuration to YAML file.
         
         Creates parent directories if they don't exist.
-        """
+        Only saves if the config_path is in a project directory.
+        
+        Raises:
+            NotAProjectDirectoryError: If the directory is not a valid project directory
+        """                
+        # Check if the directory is a project directory                    
         try:
             self.config_path.parent.mkdir(parents=True, exist_ok=True)
             with open(self.config_path, 'w', encoding='utf-8') as f:
@@ -81,6 +90,9 @@ class ConfigManager:
         Args:
             key: The configuration key
             value: The configuration value
+            
+        Raises:
+            NotAProjectDirectoryError: If the directory is not a valid project directory
         """
         self.config[key] = value
         self.save_config()
@@ -91,6 +103,9 @@ class ConfigManager:
         
         Args:
             key: The configuration key
+            
+        Raises:
+            NotAProjectDirectoryError: If the directory is not a valid project directory
         """
         if key in self.config:
             del self.config[key]
@@ -108,6 +123,9 @@ class ConfigManager:
     def clear(self) -> None:
         """
         Clear all configuration values and save the configuration.
+        
+        Raises:
+            NotAProjectDirectoryError: If the directory is not a valid project directory
         """
         self.config = {}
         self.save_config()
@@ -130,9 +148,12 @@ class ConfigManager:
         Set up default configuration if not present.
         
         This method adds default values for missing configuration entries.
+        
+        Raises:
+            NotAProjectDirectoryError: If the directory is not a valid project directory
         """
         default_config = {
-            "console": {"capture_output": True},  # Enabled by default
+            "console": {"stack_trace": False},  # Disabled by default
             "logging": {
                 "default": {
                     "level": "INFO",
@@ -192,6 +213,7 @@ class ConfigManager:
         if config_path is None:
             config_path = Path(".")
             
+        # Always use CICD_TOOLS_CACHE_FILE as the config file path
         config_file_path = config_path / CICD_TOOLS_CACHE_FILE
         config_manager = ConfigManager(config_file_path)
         

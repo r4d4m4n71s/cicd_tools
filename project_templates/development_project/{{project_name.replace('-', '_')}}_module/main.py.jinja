@@ -1,0 +1,46 @@
+"""
+Main functionality for the example module.
+
+This module contains example functions with proper logging.
+"""
+
+import logging
+
+# Get logger for this module
+logger = logging.getLogger('{{ project_name.replace('-', '_') }}.main')
+
+def process_data(data_list):
+    """
+    Process a list of data and return the result.
+    
+    Args:
+        data_list: List of data to process
+        
+    Returns:
+        Processed data result
+    """
+    logger.info(f"Processing {len(data_list)} items")
+    
+    try:
+        result = sum(data_list)
+        logger.debug(f"Calculation result: {result}")
+        return result
+    except Exception as e:
+        logger.error(f"Error processing data: {e}")
+        raise
+
+def main():
+    """Main function that demonstrates the example module."""
+    logger.info("Starting example module main function")
+    
+    # Example data processing
+    sample_data = [1, 2, 3, 4, 5]
+    logger.debug(f"Sample data: {sample_data}")
+    
+    result = process_data(sample_data)
+    logger.info(f"Final result: {result}")
+    
+    return result
+
+if __name__ == "__main__":
+    main()

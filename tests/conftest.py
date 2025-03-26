@@ -45,15 +45,3 @@ def development_project_dir(project_dir):
     (project_dir / "README.md").touch()
     (project_dir / ".pre-commit-config.yaml").touch()
     yield project_dir
-
-
-@pytest.fixture
-def github_project_dir(project_dir):
-    """Create a temporary GitHub project directory for tests."""
-    # Add files specific to a GitHub project
-    (project_dir / "pyproject.toml").touch()
-    (project_dir / "README.md").touch()
-    (project_dir / ".github").mkdir()
-    (project_dir / ".github" / "workflows").mkdir()
-    (project_dir / ".github" / "workflows" / "tests.yml").touch()
-    yield project_dir

@@ -4,18 +4,14 @@ Create menu for CICD Tools.
 This module provides the CreateMenu class for project creation and updates.
 """
 
-import os
 from pathlib import Path
 from typing import Dict, Any, Optional, List
 
-import questionary
-from questionary import Choice
-
 from cicd_tools.menus.menu_utils import Menu, MenuAction, confirm_action, ask_for_input, ask_for_selection
 from cicd_tools.templates.template_manager import TemplateManager
-from cicd_tools.templates.template_utils import get_template_info, process_template_variables
+from cicd_tools.templates.template_utils import get_template_info
 from cicd_tools.utils.config_manager import ConfigManager
-
+from cicd_tools.utils.jinja_utils import evaluate_jinja_expression
 class CreateMenu:
     """
     Menu for project creation and updates.
@@ -39,8 +35,14 @@ class CreateMenu:
         if self.template_manager.is_project_from_template(directory):
             menu.add_action(MenuAction(
                 "Update Project",
-                "Update an existing project using its template",
+                "Update the existing project using its proper template",
                 self._update_project,
+                directory=directory
+            ))
+            menu.add_action(MenuAction(
+                "Create internal project",
+                "Create a new project from a template inside a separated folder",
+                self._create_project,
                 directory=directory
             ))
         else:
@@ -82,9 +84,6 @@ class CreateMenu:
         if not template_name:
             return
             
-        # Get template information
-        template_info = get_template_info(template_name)
-        
         # Get project name
         project_name = ask_for_input("Enter project name:")
         
@@ -101,33 +100,81 @@ class CreateMenu:
             if not confirm_action(f"Project directory {project_dir} already exists. Overwrite?"):
                 return
                 
-        # Get template variables
-        variables = {"project_name": project_name_safe}
-        
-        for var_name, var_info in template_info["variables"].items():
-            if var_name == "project_name":
-                continue
-                
-            prompt = f"{var_info['description']} ({var_info['default']}):"
-            
-            if var_info["choices"]:
-                value = ask_for_selection(prompt, var_info["choices"])
-            else:
-                value = ask_for_input(prompt, var_info["default"])
-                
-            variables[var_name] = value
-            
-        # Create the project
         try:
+            # # Get template information
+            # template_info = get_template_info(template_name)
+            
+            # # Initialize project info with project name
+            # project_info = {"project_name": project_name_safe}
+            
+            # # Ask questions and get variable values
+            # variables = self._ask_questions(template_info, project_info)
+            
+            # Create the project
             self.template_manager.create_project(
                 template_name,
-                project_dir,
-                **variables
-            )            
+                project_dir
+            )
+            
             print(f"Project created successfully at {project_dir}")
         except Exception as e:
             print(f"Failed to create project: {e}")   
 
+    def _ask_questions(self, template_info: Dict[str, Any], project_info: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Ask questions based on template variables with conditional logic.
+        
+        Args:
+            template_info: Template information
+            project_info: Project information with default values
+            
+        Returns:
+            Dictionary of variable names and values
+        """
+        variables = {}
+        
+        for var_name, var_info in template_info["variables"].items():
+            if var_name == "project_name":
+                variables[var_name] = project_info[var_name]
+                continue
+            
+            default_value = var_info.get("default")            
+            # Evaluate the default value if it's a Jinja expression
+            if isinstance(default_value, str) and "{{" in default_value and "}}" in default_value:
+                default_value = evaluate_jinja_expression(default_value, variables, project_info)
+            else:
+                # Get default value from project_info or template default
+                default_value = project_info.get(var_name, var_info["default"])
+
+            # Check if the variable has a "when" condition
+            if var_info.get("when"):
+                # Evaluate the condition using the jinja_utils function
+                condition_result = evaluate_jinja_expression(var_info["when"], variables, project_info)
+                
+                # If the condition is false, skip this question
+                if not condition_result:
+                    # Skip this question and use the default value
+                    if var_name in project_info:
+                        variables[var_name] = project_info[var_name]
+                    else:
+                        # Evaluate the default value if it's a Jinja expression
+                        default_value = var_info["default"]
+                        if isinstance(default_value, str) and "{{" in default_value and "}}" in default_value:
+                            default_value = evaluate_jinja_expression(default_value, variables, project_info)
+                        variables[var_name] = default_value
+                    continue
+            
+            prompt = f"{var_info['description']}: "
+            
+            if var_info["choices"]:
+                value = ask_for_selection(prompt, var_info["choices"], default_value)
+            else:
+                value = ask_for_input(prompt, default_value)
+                
+            variables[var_name] = value
+            
+        return variables
+    
     def _update_project(self, directory: Path) -> None:
         """
         Update an existing project using its template.
@@ -135,11 +182,18 @@ class CreateMenu:
         Args:
             directory: Project directory to update
         """
-        # Check if the directory is a project created from a template
         try:
-            # Update the project
-            self.template_manager.update_project(directory)
+            # # Get template and project information
+            # template_info = get_template_info(ConfigManager.get_config(directory).get("template", {}).get("name"))
+            # project_info = TemplateManager.get_project_defaults(directory)
             
+            # # Ask questions and get variable values
+            # variables = self._ask_questions(template_info, project_info)
+            
+            # Update the project
+            #self.template_manager.update_project(directory, **variables)
+            self.template_manager.update_project(directory)
+
             print(f"Project updated successfully at {directory}")
         except ValueError as e:
             print(f"Error: {e}")
