@@ -122,38 +122,18 @@ class TemplateManager:
         if not template_path.exists():
             raise ValueError(f"Template '{template_name}' not found")
             
-        # Process template variables
-        processed_answers = self._process_template_variables(template_name, destination, variables)
-        data ={'current_year':datetime.now().year}
-
-        # Create the project using Copier
+        # Ensure the destination directory exists
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        
         try:
-            # Ensure the destination directory exists
-            destination.parent.mkdir(parents=True, exist_ok=True)
-            
-            # If processed_answers are not empty, create a temporary template with default values replaced
-            if processed_answers:
-                with temp_template(template_path, processed_answers) as temp_template_path:
-                    # Run Copier to create the project using the temporary template
-                    answers = self._run_copier(temp_template_path, destination, data=data)
-            else:
-                # Run Copier to create the project using the original template
-                answers = self._run_copier(template_path, destination, data=data)
-            
-            # Merge the user's answers with the processed variables
-            merged_vars = {**processed_answers, **answers}
-            
-            # Save template information in project configuration
-            config_manager = ConfigManager.get_config(destination)
-            config_manager.set("template", {
-                "name": template_name,
-                "version": self._get_template_version(template_path),
-                "variables": merged_vars
-            })
-            
-            # Set up example module and default configuration
-            self._setup_example_module(destination, template_name)                                           
-
+            # Use the common method for project creation/update
+            self._process_project(
+                template_name=template_name,
+                template_path=template_path,
+                project_dir=destination,
+                variables=variables,
+                is_update=False
+            )
         except Exception as e:
             raise RuntimeError(f"Failed to create project: {e}") from e
             
@@ -195,40 +175,67 @@ class TemplateManager:
         
         if not template_path.exists():
             raise ValueError(f"Template '{template_name}' not found")
-                    
-        # Process template variables
-        processed_answers = self._process_template_variables(template_name, project_dir, variables)
         
-        data ={'current_year':datetime.now().year}
-
-        # Update the project using Copier
         try:
-            # If processed_answers are not empty, create a temporary template with default values replaced
-            if processed_answers:
-                with temp_template(template_path, processed_answers) as temp_template_path:
-                    # Run Copier to create the project using the temporary template
-                    answers = self._run_copier(temp_template_path, project_dir, data=data)
-            else:
-                # Run Copier to create the project using the original template
-                answers = self._run_copier(template_path, project_dir, data=data)
-
-            # Merge the user's answers with the processed variables
-            merged_vars = {**processed_answers, **answers}
-            
-            # Update template information in project configuration
-            config_manager = ConfigManager.get_config(project_dir)
-            config_manager.set("template", {
-                "name": template_name,
-                "version": self._get_template_version(template_path),
-                "variables": merged_vars
-            })
-            
-            # Set up example module and default configuration
-            self._setup_example_module(project_dir, template_name)
-            
+            # Use the common method for project creation/update
+            self._process_project(
+                template_name=template_name,
+                template_path=template_path,
+                project_dir=project_dir,
+                variables=variables,
+                is_update=True
+            )
         except Exception as e:
             raise RuntimeError(f"Failed to update project: {e}") from e
             
+    def _process_project(
+        self,
+        template_name: str,
+        template_path: Path,
+        project_dir: Path,
+        variables: Dict[str, Any],
+        is_update: bool
+    ) -> None:
+        """
+        Common method for processing project creation and updates.
+        
+        Args:
+            template_name: Name of the template
+            template_path: Path to the template
+            project_dir: Destination directory for the project
+            variables: Template variables
+            is_update: Whether this is an update operation
+            
+        Raises:
+            RuntimeError: If project processing fails
+        """
+        # Process template variables
+        processed_answers = self._process_template_variables(template_name, project_dir, variables)
+        
+        # Add current year to data
+        data = {'current_year': datetime.now().year}
+        data = {**variables, **data}
+        
+        # If processed_answers are not empty, create a temporary template with default values replaced
+        if processed_answers:
+            with temp_template(template_path, processed_answers) as temp_template_path:
+                # Run Copier to create/update the project using the temporary template
+                answers = self._run_copier(temp_template_path, project_dir, data=data)
+        else:
+            # Run Copier to create/update the project using the original template
+            answers = self._run_copier(template_path, project_dir, data=data)
+        
+        # Merge the user's answers with the processed variables
+        merged_vars = {**processed_answers, **answers}
+        
+        # Save/update template information in project configuration
+        config_manager = ConfigManager.get_config(project_dir)
+        config_manager.set("template", {
+            "name": template_name,
+            "version": self._get_template_version(template_path),
+            "variables": merged_vars
+        })
+        
     def _process_template_variables(
         self,
         template_name: str,
@@ -341,31 +348,7 @@ class TemplateManager:
         else:
             return "0.1.0"  # Default version
             
-        return config.get("_version", "0.1.0")
-        
-    def _setup_example_module(self, destination: Path, template_name: str) -> None:
-        """
-        Set up the example module in the created project.
-        
-        Args:
-            destination: Path to the project directory
-            template_name: Name of the template used
-        """
-        try:
-            # Ensure the .app_cache directory exists
-            app_cache_dir = destination / '.app_cache'
-            app_cache_dir.mkdir(parents=True, exist_ok=True)
-            
-            # Set up default configuration if it doesn't exist
-            config_path = app_cache_dir / 'config.yaml'
-            if not config_path.exists():
-                # Get the config manager
-                config_manager = ConfigManager(config_path)
-                
-                # Set up default configuration
-                config_manager.setup_default_config()                                                               
-        except Exception as e:
-            print(f"Warning: Failed to set up example module configuration: {e}")
+        return config.get("_version", "0.1.0")        
     
     def _run_copier(
         self,

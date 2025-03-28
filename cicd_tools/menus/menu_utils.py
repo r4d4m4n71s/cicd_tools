@@ -4,7 +4,9 @@ Menu utilities for CICD Tools.
 This module provides common menu functionality for CICD Tools with enhanced styling.
 """
 
-from typing import List, Callable, Dict, Any, Optional, Union
+from typing import List, Callable, Dict, Any, Optional, Union, TypeVar, Generic
+
+T = TypeVar('T')
 
 import questionary
 from questionary import Choice
@@ -44,6 +46,42 @@ def display_header(title: str, subtitle: Optional[str] = None) -> None:
         border_style="blue"
     ))
 
+class ActionResult(Generic[T]):
+    """
+    Represents the result of a menu action.
+    
+    This class encapsulates the result of a menu action, including the redirect value and the result of the callback.
+    """
+    
+    def __init__(self, result: T, redirect: Optional[str] = None):
+        """
+        Initialize an action result.
+        
+        Args:
+            result: The result of the callback function
+            redirect: The redirect value (e.g., 'back', 'exit')
+        """
+        self.result = result
+        self.redirect = redirect
+        
+    def get_redirect(self) -> Optional[str]:
+        """
+        Get the redirect value.
+        
+        Returns:
+            The redirect value, or None if no redirect was specified
+        """
+        return self.redirect
+        
+    def get_result(self) -> T:
+        """
+        Get the result of the callback function.
+        
+        Returns:
+            The result of the callback function
+        """
+        return self.result
+
 class MenuAction:
     """
     Represents a single menu action/option.
@@ -61,6 +99,8 @@ class MenuAction:
             callback: Function to call when the action is selected
             icon: Optional icon to display next to the action (emoji or symbol)
             **kwargs: Additional arguments to pass to the callback
+                - pause_after_execution: Whether to pause after executing the action (default: False)
+                - redirect: Where to redirect after execution ('back', 'exit', or None to stay in current menu)
         """
         self.name = name
         self.description = description
@@ -81,7 +121,21 @@ class MenuAction:
         """
         # Merge the kwargs from initialization with the ones passed to execute
         merged_kwargs = {**self.kwargs, **kwargs}
-        return self.callback(*args, **merged_kwargs)
+        
+        # Extract special parameters before passing to callback
+        pause_after_execution = merged_kwargs.pop('pause_after_execution', False)
+        redirect = merged_kwargs.pop('redirect', None)
+        
+        # Call the callback with the remaining kwargs
+        result = self.callback(*args, **merged_kwargs)
+        
+        # Add a pause after executing the action if requested
+        if pause_after_execution:
+            input("\nPress Enter to continue...")
+        
+        # Return an ActionResult object with both the redirect value and the result
+        action_result = ActionResult(result, redirect)
+        return action_result
 
 class Menu:
     """
@@ -112,7 +166,7 @@ class Menu:
         """
         self.actions.append(action)
         
-    def display(self) -> Optional[Any]:
+    def display(self) -> ActionResult:
         """
         Display the menu and handle user selection.
         
@@ -121,7 +175,7 @@ class Menu:
         """
         if not self.actions:
             console.print(f"[bold red]No actions available for {self.title}[/bold red]")
-            return None
+            return ActionResult(None, "back")
             
         # Display styled header
         display_header(self.title, "Select an action:")
@@ -146,7 +200,7 @@ class Menu:
         
         # Handle Back/Exit option
         if result is None:
-            return None
+            return ActionResult(None, "back")
         
         # Convert result to integer if it's a string that represents an integer
         if isinstance(result, str) and result.isdigit():
@@ -163,13 +217,13 @@ class Menu:
             else:
                 # If we get here, we couldn't find a matching action
                 # This is a fallback to prevent errors
-                return None
+                return ActionResult(None, "back")
             
         # Ensure result is a valid integer index
         if isinstance(result, int) and 0 <= result < len(self.actions):
             selected_action = self.actions[result]
         else:
-            return None
+            return ActionResult(None, "back")
         return selected_action.execute()
 
 def confirm_action(message: str) -> bool:

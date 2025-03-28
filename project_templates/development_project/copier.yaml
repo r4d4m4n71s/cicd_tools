@@ -63,7 +63,7 @@ author_email:
 python_version:
   type: str
   help: "Python version"
-  default: "3.8"
+  default: "3.12"
   choices:
     - "3.8"
     - "3.9"

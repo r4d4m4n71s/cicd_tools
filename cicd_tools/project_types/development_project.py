@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Dict, List, Any, Optional
 
 import questionary
+from env_manager import PackageManager
 from cicd_tools.project_types.base_project import BaseProject
 from cicd_tools.project_types.mixins import GitMixin, VersionManagerMixin
 from cicd_tools.utils.config_manager import ConfigManager
@@ -54,7 +55,8 @@ class DevelopmentProject(GitMixin, VersionManagerMixin, BaseProject):
                 "name": "Prehook",
                 "description": "Configure pre-commit hooks to automatically check code quality before commits, ensuring consistent standards and preventing issues from being committed",
                 "callback": self.prehook,
-                "icon": "🔄"
+                "icon": "🔄",
+                "pause_after_execution": True  # Pause after prehook to show output
             })
         
         # Release and Deploy are core features of the development project
@@ -63,13 +65,15 @@ class DevelopmentProject(GitMixin, VersionManagerMixin, BaseProject):
                 "name": "Release",
                 "description": "Create a versioned release package for distribution, including version bumping, building artifacts, and preparing release directories for beta or production",
                 "callback": self.release,
-                "icon": "🚀"
+                "icon": "🚀",
+                "pause_after_execution": True  # Pause after release to show output
             },
             {
                 "name": "Deploy",
                 "description": "Deploy the project to test or production environments, uploading packages to PyPI or TestPyPI repositories for distribution to end users",
                 "callback": self.deploy,
-                "icon": "📦"
+                "icon": "📦",
+                "pause_after_execution": True  # Pause after deploy to show output
             }
         ])
         
@@ -122,8 +126,11 @@ class DevelopmentProject(GitMixin, VersionManagerMixin, BaseProject):
         try:
             
             # Install required packages
-            self._install_if_needed("build")
-            self._install_if_needed("bump2version")
+            pck_manager = PackageManager(self.get_env_manager().get_runner())
+            if not pck_manager.is_installed("build"):
+                pck_manager.install("build")
+            if not pck_manager.is_installed("bump2version"):
+                pck_manager.install("bump2version")
             
             # Configure git for release
             self._configure_git_for_release()
@@ -167,7 +174,9 @@ class DevelopmentProject(GitMixin, VersionManagerMixin, BaseProject):
         try:
             
             # Install twine if needed
-            self._install_if_needed("twine")
+            pck_manager = PackageManager(self.get_env_manager().get_runner())
+            if not pck_manager.is_installed("twine"):
+                pck_manager.install("twine")
             
             # Deploy to the selected target
             if target == "prod":

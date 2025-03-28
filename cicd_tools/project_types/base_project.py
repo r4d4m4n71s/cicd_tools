@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Dict, List, Any, Optional
 
 # Import EnvManager directly from env_manager
-from env_manager import EnvManager, ProgressRunner, IRunner
+from env_manager import EnvManager, ProgressRunner, IRunner, PackageManager
 from cicd_tools.utils.config_manager import ConfigManager
 import questionary
 
@@ -142,6 +142,15 @@ class BaseProject(ABC):
             True if build was successful, False otherwise
         """      
         try:
+            # Ensure setuptools is installed
+            pck_manager = PackageManager(self.get_env_manager().get_runner())
+            
+            if not pck_manager.is_installed("setuptools"):
+                pck_manager.install("setuptools")
+                
+            if not pck_manager.is_installed("wheel"):
+                pck_manager.install("wheel")
+            
             # Build the project using setup.py and set the build output folder to the project path
             self.run("python", "setup.py", "build", "--build-base", str(self.project_path / "build"))
             print("✅ Build finished.")
@@ -184,10 +193,11 @@ class BaseProject(ABC):
                 parameters = questionary.text("Enter the parameters you want to use for testing:").ask()
                 runner.run("pytest", ".", *parameters.split(), capture_output=False, cwd=str(self.project_path))
             
-            print("✅ Test finished.")   
+            print("✅ Test finished.")
             return True
         except Exception as e:
             print(f"⚠️ Tests failed: {e}")
+            print("⚠️ Tip. Ensure all dependencies are well configured and run install.")
             return False
                         
     def clean(self) -> bool:
@@ -244,19 +254,22 @@ class BaseProject(ABC):
                 "name": "Install",
                 "description": "Install the project in development mode with all dependencies, making it ready for testing and development work",
                 "callback": self.install,
-                "icon": "📥"
+                "icon": "📥",
+                "pause_after_execution": True  # Pause after installation to show output
             },
             {
                 "name": "Build",
                 "description": "Build the project into distributable packages, creating artifacts ready for release and distribution",
                 "callback": self.build,
-                "icon": "🏗️"
+                "icon": "🏗️",
+                "pause_after_execution": True  # Pause after build to show output
             },
             {
                 "name": "Clean",
                 "description": "Clean all build artifacts, removing build directories, distribution files, and egg-info to ensure a fresh build environment",
                 "callback": self.clean,
-                "icon": "🧹"
+                "icon": "🧹",
+                "pause_after_execution": True  # Pause after cleaning to show output
             }
         ]
         
@@ -266,7 +279,8 @@ class BaseProject(ABC):
                 "name": "Test",
                 "description": "Run project tests with various options including all tests, failed tests only, with coverage reports, or with custom parameters",
                 "callback": self.test,
-                "icon": "🧪"
+                "icon": "🧪",
+                "pause_after_execution": True  # Pause after tests to show output
             })
         
         return common_menus

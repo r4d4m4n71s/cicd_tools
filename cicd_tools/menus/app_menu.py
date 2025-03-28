@@ -14,7 +14,7 @@ from cicd_tools.project_types.development_project import DevelopmentProject
 from cicd_tools.templates.template_utils import detect_template_type
 from cicd_tools.utils.config_manager import ConfigManager
 
-
+        
 class AppMenu:
     """
     Menu for project-specific operations.
@@ -33,6 +33,9 @@ class AppMenu:
         Args:
             project_dir: Project directory to work with
         """
+        # Clear the screen before showing the menu
+        from rich.console import Console
+        Console().clear()
         # Detect project type
         project_type = self._detect_project_type(project_dir)
         
@@ -41,37 +44,44 @@ class AppMenu:
             return
             
         # Create project instance
-        project = project_type(project_dir)
+        project = project_type(project_dir)                
         
-        # Check environment configuration
-        self._check_environment_config(project)
+        self._configure_new_environment_if_not_exist(project)
         
         # Get styling configuration
         config_manager = ConfigManager.get_config(project_dir)
         style_config = config_manager.get("styling", {})
         
-        # Create menu with styling
-        menu = Menu(f"App Menu - {project_dir.name}", style_config)
-        
-        # Add environment management action with icon
-        menu.add_action(MenuAction(
-            "Manage Environment",
-            "Manage the project environment",
-            self._manage_environment,
-            icon="🔧",
-            project=project
-        ))
-        
-        # Add project-specific actions with icons
-        for action in project.get_menus():
+        # Loop until user chooses to exit
+        while True:
+            # Create menu with styling
+            menu = Menu(f"App Menu - {project_dir.name}", style_config)
+            
+            # Add environment management action with icon
             menu.add_action(MenuAction(
-                action["name"],
-                action["description"],
-                action["callback"],
-                icon=action.get("icon")
-            ))                
-        
-        menu.display()
+                "Manage Environment",
+                "Manage the project environment",
+                self._manage_environment,
+                icon="🔧",
+                project=project
+            ))
+            
+            # Add project-specific actions with icons
+            for action in project.get_menus():
+                menu.add_action(MenuAction(
+                    action["name"],
+                    action["description"],
+                    action["callback"],
+                    icon=action.get("icon"),
+                    pause_after_execution=action.get("pause_after_execution", False)
+                ))                
+            
+            # Display the menu and get the result
+            result = menu.display()
+            
+            # If the user selected "Back/Exit" or an action returned a redirect to exit, break the loop
+            if result.get_redirect() in ["back", "exit"]:
+                break
         
     def _detect_project_type(self, project_dir: Path) -> Optional[Type[BaseProject]]:
         """
@@ -94,12 +104,15 @@ class AppMenu:
         # Default to simple project
         return None
         
-    def _check_environment_config(self, project: BaseProject) -> None:
+    def _configure_new_environment_if_not_exist(self, project: BaseProject) -> bool:
         """
-        Check if the environment is configured for the project.
+        Configure a new environment if one doesn't already exist.
         
         Args:
             project: Project instance
+            
+        Returns:
+            True if a new environment was created, False if the environment already existed
         """
         # Get project configuration
         config_manager = ConfigManager.get_config(project.project_path)
@@ -125,7 +138,18 @@ class AppMenu:
             # Install project
             project.install()
             
-    def _manage_environment(self, project: BaseProject) -> None:
+            print("Environment configured successfully")
+            
+            # Pause to show output
+            input("\nPress Enter to continue...")
+            
+            # Return True to indicate a new environment was created
+            return True
+
+        # Return False to indicate the environment already existed
+        return False
+                
+    def _manage_environment(self, project: BaseProject) -> bool:
         """
         Manage the project environment.
         
@@ -133,49 +157,66 @@ class AppMenu:
             project: Project instance
         """
         # Get project configuration
+        # Configure new environment if it doesn't exist
+        # If a new environment was created, we'll exit and let the user restart
+        if self._configure_new_environment_if_not_exist(project):
+            return True
+        
         config_manager = ConfigManager.get_config(project.project_path)
         env_config = config_manager.get("environment")
-        
-        if env_config is None:
-            print("No environment configured")
-            return
-            
+                   
         # Get styling configuration
         style_config = config_manager.get("styling", {})
         
-        # Create menu with styling
-        menu = Menu("Environment Management", style_config)
-        
-        if env_config["type"] == "virtual":
-            # Add actions for virtual environment with icons
+        # Loop until user chooses to exit
+        while True:
+            # Create menu with styling
+            menu = Menu("Environment Management", style_config)
+            
+            if env_config["type"] == "virtual":
+                # Add actions for virtual environment with icons
+                menu.add_action(MenuAction(
+                    f"Recreate Environment {Path(env_config["path"]).name}",
+                    "Recomended in case of files curruption problems or starting from scratch",
+                    self._recreate_environment,
+                    icon="🔄",
+                    project=project,
+                    config_manager=config_manager,
+                pause_after_execution=True,  # Pause needed as this shows output
+                redirect="exit"  # Return to the main AppMenu after execution
+                ))
+                
+                menu.add_action(MenuAction(
+                    f"Delete Environment {Path(env_config["path"]).name}",
+                    "Removing physical environment folders",
+                    self._delete_environment,
+                    icon="🗑️",
+                    project=project,
+                    config_manager=config_manager,
+                    pause_after_execution=True,  # Pause needed as this shows output
+                redirect="exit"  # Return to the main AppMenu after execution
+                ))
+                
             menu.add_action(MenuAction(
-                f"Recreate Environment {Path(env_config["path"]).name}",
-                "Recomended in case of files curruption problems or starting from scratch",
-                self._recreate_environment,
-                icon="🔄",
+                "Create New Environment",
+                "Use for install dependencies and project execution",
+                self._create_environment,
+                icon="➕",
                 project=project,
-                config_manager=config_manager
+                config_manager=config_manager,
+                pause_after_execution=True,  # Pause needed as this shows output
+                redirect="exit"  # Return to the main AppMenu after execution
             ))
             
-            menu.add_action(MenuAction(
-                f"Delete Environment {Path(env_config["path"]).name}",
-                "Removing physical environment folders",
-                self._delete_environment,
-                icon="🗑️",
-                project=project,
-                config_manager=config_manager
-            ))
+            # Display the menu and get the result
+            result = menu.display()
             
-        menu.add_action(MenuAction(
-            "Create New Environment",
-            "Use for install dependencies and project execution",
-            self._create_environment,
-            icon="➕",
-            project=project,
-            config_manager=config_manager
-        ))
+            # If the user selected "Back/Exit" or an action returned a redirect to exit, break the loop
+            if result.get_redirect() in ["back", "exit"]:
+                break
         
-        menu.display()
+        # Return True to indicate the app menu should continue
+        return True
         
     def _recreate_environment(self, project: BaseProject, config_manager: ConfigManager) -> None:
         """
@@ -188,8 +229,18 @@ class AppMenu:
         env_config = config_manager.get("environment")
         
         if env_config is None or env_config["type"] != "virtual":
-            print("No virtual environment configured")
-            return
+            # Configure new environment if it doesn't exist
+            # If a new environment was created, we'll exit
+            if self._configure_new_environment_if_not_exist(project):
+                return
+            
+            # Refresh env_config after configuration
+            config_manager = ConfigManager.get_config(project.project_path)
+            env_config = config_manager.get("environment")
+            
+            # If still not configured or not virtual, return
+            if env_config is None or env_config["type"] != "virtual":
+                return
             
         if not confirm_action("Are you sure you want to recreate the virtual environment?"):
             return
@@ -225,11 +276,20 @@ class AppMenu:
         env_config = config_manager.get("environment")
         
         if env_config is None or env_config["type"] != "virtual":
-            print("No virtual environment configured")
-            return
+            
+            # Refresh env_config after configuration
+            config_manager = ConfigManager.get_config(project.project_path)
+            env_config = config_manager.get("environment")
+            
+            # If still not configured or not virtual, return
+            if env_config is None or env_config["type"] != "virtual":
+                return
             
         if not confirm_action("Are you sure you want to delete the virtual environment?"):
-            return
+            print("Exiting..")
+            # Exit the application
+            import sys
+            sys.exit(0)
             
         try:
             # Get environment manager
@@ -242,6 +302,13 @@ class AppMenu:
             config_manager.delete("environment")
             
             print("Environment deleted successfully")
+            
+            if not confirm_action("A new environment is required, do you want to create one?"):
+                return
+            
+            # Ensure the user has a environment configured for use
+            self._configure_new_environment_if_not_exist(project) 
+
         except Exception as e:
             print(f"Failed to delete environment: {e}")
             

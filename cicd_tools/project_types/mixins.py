@@ -9,22 +9,7 @@ from typing import Optional
 import questionary
 from env_manager import PackageManager
 
-class PackageManagerMixin:
-    """Mixin providing package management functionality."""
-    
-    def _install_if_needed(self, package: str) -> None:
-        """
-        Install a package if it's not already installed.
-        
-        Args:
-            package: Package to install
-        """
-        pck_manager = PackageManager(self.get_env_manager().get_runner())
-
-        if not pck_manager.is_installed(package):
-            pck_manager.install(package)        
-
-class GitMixin(PackageManagerMixin):
+class GitMixin:
     """Mixin providing Git-related functionality."""
     
     def prehook(self, action: Optional[str] = None) -> bool:
@@ -45,7 +30,9 @@ class GitMixin(PackageManagerMixin):
             
         try:
             # Install pre-commit if needed
-            self._install_if_needed("pre-commit")
+            pck_manager = PackageManager(self.get_env_manager().get_runner())
+            if not pck_manager.is_installed("pre-commit"):
+                pck_manager.install("pre-commit")
             
             if action == "enable":
                 self.run("pre-commit", "install")

@@ -1,14 +1,14 @@
 """
-Tests for the sample module.
+Tests for the {{ project_name.replace('-', '_') }}_module.
 """
 
 import unittest
 
-from sample_module.main import process_data
+from {{ project_name.replace('-', '_') }}_module.main import process_data
 
 
-class TestSampleModule(unittest.TestCase):
-    """Tests for the sample module."""
+class Test{{ project_name.replace('-', '_').title().replace('_', '') }}(unittest.TestCase):
+    """Tests for the {{ project_name.replace('-', '_') }}_module."""
     
     def test_process_data(self):
         """Test the process_data function."""
