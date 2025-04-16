@@ -199,7 +199,7 @@ class AppMenu:
                 
             menu.add_action(MenuAction(
                 "Create New Environment",
-                "Use for install dependencies and project execution",
+                "Used for install dependencies and project execution",
                 self._create_environment,
                 icon="➕",
                 project=project,

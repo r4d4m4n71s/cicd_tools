@@ -2,22 +2,29 @@
 current_version = 0.1.0
 commit = True
 tag = True
-parse = (?P<major>\d+)\.(?P<minor>\d+)\.(?P<patch>\d+)(\.(?P<release>[a-z]+))?
+parse = (?P<major>\d+)\.(?P<minor>\d+)\.(?P<patch>\d+)((?P<release>[b])(?P<beta>\d+))?
 serialize = 
-	{major}.{minor}.{patch}.{release}
+	{major}.{minor}.{patch}{release}{beta}
 	{major}.{minor}.{patch}
 
 [bumpversion:part:release]
-optional_value = prod
-first_value = beta
+optional_value = none
+first_value = b
 values = 
-	beta
-	prod
+	b
+	none
+
+[bumpversion:part:beta]
+first_value = 0
 
 [bumpversion:file:pyproject.toml]
 search = version = "{current_version}"
 replace = version = "{new_version}"
 
-[bumpversion:file:{{ project_name.replace('-', '_') }}/__init__.py]
+[bumpversion:file:{{ project_name.replace('-', '_') }}_module/__init__.py]
 search = __version__ = "{current_version}"
 replace = __version__ = "{new_version}"
+
+[bumpversion:file:README.md]
+search = **Current Version:** {current_version}
+replace = **Current Version:** {new_version}

@@ -255,21 +255,24 @@ class BaseProject(ABC):
                 "description": "Install the project in development mode with all dependencies, making it ready for testing and development work",
                 "callback": self.install,
                 "icon": "📥",
-                "pause_after_execution": True  # Pause after installation to show output
+                "pause_after_execution": True,  # Pause after installation to show output
+                "redirect": "back"  # Return to main menu after pressing Enter
             },
             {
                 "name": "Build",
                 "description": "Build the project into distributable packages, creating artifacts ready for release and distribution",
                 "callback": self.build,
                 "icon": "🏗️",
-                "pause_after_execution": True  # Pause after build to show output
+                "pause_after_execution": True,  # Pause after build to show output
+                "redirect": "back"  # Return to main menu after pressing Enter
             },
             {
                 "name": "Clean",
                 "description": "Clean all build artifacts, removing build directories, distribution files, and egg-info to ensure a fresh build environment",
                 "callback": self.clean,
                 "icon": "🧹",
-                "pause_after_execution": True  # Pause after cleaning to show output
+                "pause_after_execution": True,  # Pause after cleaning to show output
+                "redirect": "back"  # Return to main menu after pressing Enter
             }
         ]
         
@@ -280,7 +283,8 @@ class BaseProject(ABC):
                 "description": "Run project tests with various options including all tests, failed tests only, with coverage reports, or with custom parameters",
                 "callback": self.test,
                 "icon": "🧪",
-                "pause_after_execution": True  # Pause after tests to show output
+                "pause_after_execution": True,  # Pause after tests to show output
+                "redirect": "back"  # Return to main menu after pressing Enter
             })
         
         return common_menus

@@ -4,10 +4,10 @@ Tests for the {{ project_name.replace('-', '_') }} module.
 
 import unittest
 
-from {{ project_name.replace('-', '_') }}.main import process_data
+from {{ project_name.replace('-', '_') }}_module.main import process_data
 
 
-class Test{{ project_name.replace('-', '_').title().replace('_', '') }}(unittest.TestCase):
+class Test{{ project_name.replace('-', '_').title().replace('_', '') }}_module(unittest.TestCase):
     """Tests for the {{ project_name.replace('-', '_') }} module."""
     
     def test_process_data(self):

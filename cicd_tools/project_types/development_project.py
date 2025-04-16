@@ -56,7 +56,8 @@ class DevelopmentProject(GitMixin, VersionManagerMixin, BaseProject):
                 "description": "Configure pre-commit hooks to automatically check code quality before commits, ensuring consistent standards and preventing issues from being committed",
                 "callback": self.prehook,
                 "icon": "🔄",
-                "pause_after_execution": True  # Pause after prehook to show output
+                "pause_after_execution": True,  # Pause after prehook to show output
+                "redirect": "back"  # Return to main menu after pressing Enter
             })
         
         # Release and Deploy are core features of the development project
@@ -66,14 +67,16 @@ class DevelopmentProject(GitMixin, VersionManagerMixin, BaseProject):
                 "description": "Create a versioned release package for distribution, including version bumping, building artifacts, and preparing release directories for beta or production",
                 "callback": self.release,
                 "icon": "🚀",
-                "pause_after_execution": True  # Pause after release to show output
+                "pause_after_execution": True,  # Pause after release to show output
+                "redirect": "back"  # Return to main menu after pressing Enter
             },
             {
                 "name": "Deploy",
                 "description": "Deploy the project to test or production environments, uploading packages to PyPI or TestPyPI repositories for distribution to end users",
                 "callback": self.deploy,
                 "icon": "📦",
-                "pause_after_execution": True  # Pause after deploy to show output
+                "pause_after_execution": True,  # Pause after deploy to show output
+                "redirect": "back"  # Return to main menu after pressing Enter
             }
         ])
         
@@ -107,12 +110,25 @@ class DevelopmentProject(GitMixin, VersionManagerMixin, BaseProject):
             return False
     # end overrided methods
 
-    def release(self, release_type: Optional[str] = None) -> bool:
+    def _clean_dist_root(self) -> None:
+        """
+        Clean up the root of the dist folder while preserving subdirectories.
+        This prevents copying outdated files during the release process.
+        """
+        dist_dir = self.project_path / "dist"
+        if dist_dir.exists():
+            for file in dist_dir.glob("*"):
+                if file.is_file():
+                    file.unlink()
+    
+    def release(self, release_type: Optional[str] = None, bump_type: Optional[str] = None) -> bool:
         """
         Create a release.
         
         Args:
             release_type: Type of release ('beta' or 'prod')
+            bump_type: Type of version increment ('patch', 'minor', or 'major').
+                       Only used for production releases.
             
         Returns:
             True if release creation was successful, False otherwise
@@ -122,9 +138,38 @@ class DevelopmentProject(GitMixin, VersionManagerMixin, BaseProject):
                 "Select release type:",
                 choices=["beta", "prod"]
             ).ask()
+        
+        # Get current version to display in prompts
+        current_version = self._get_current_version()
+        is_beta = self._is_beta_version(current_version)
+        
+        # For production releases, ask for bump type if not provided
+        if release_type == "prod" and bump_type is None:
+            # Calculate what the next versions would be for different bump types
+            next_version_patch = self._calculate_next_version(current_version, "patch", "prod")
+            next_version_minor = self._calculate_next_version(current_version, "minor", "prod")
+            next_version_major = self._calculate_next_version(current_version, "major", "prod")
+            
+            bump_type = questionary.select(
+                f"Current version: {current_version}\nSelect version increment type:",
+                choices=[
+                    {"name": f"patch - If it's for Bug fixes ({current_version} → {next_version_patch})", "value": "patch"},
+                    {"name": f"minor - If it's for New features ({current_version} → {next_version_minor})", "value": "minor"},
+                    {"name": f"major - If it's for Breaking changes ({current_version} → {next_version_major})", "value": "major"}
+                ]
+            ).ask()
+        elif release_type == "beta" and bump_type is None:
+            # For beta releases, show what the next beta version would be
+            next_beta_version = self._calculate_next_version(current_version, "patch", "beta")
+            print(f"Current version: {current_version}")
+            print(f"Will create beta version: {next_beta_version}")
+            # Default to patch for beta releases
+            bump_type = "patch"
+        else:
+            # Use provided bump_type (or default to patch)
+            bump_type = bump_type or "patch"
             
         try:
-            
             # Install required packages
             pck_manager = PackageManager(self.get_env_manager().get_runner())
             if not pck_manager.is_installed("build"):
@@ -135,21 +180,26 @@ class DevelopmentProject(GitMixin, VersionManagerMixin, BaseProject):
             # Configure git for release
             self._configure_git_for_release()
             
-            # Bump version
-            if release_type == "prod":
-                self.run("bump2version", "patch", capture_output = False)
-            else:
-                # Get current version
-                current_version = self._get_current_version()
-                self.run("bump2version", "patch", "--new-version", f"{current_version}.beta", capture_output = False)
-                
+            # Bump version according to release type and bump type
+            self.bump_version_for_release(release_type, bump_type)
+            
+            # Clean up the root of the dist folder before building
+            self._clean_dist_root()
+            
             # Build the project
             self.run("python", "-m", "build")
             
             # Prepare release directory
             self._prepare_release_directory(release_type)
             
-            print(f"✅ Release created successfully ({release_type})")
+            # Clean up the root of the dist folder again after copying files
+            self._clean_dist_root()
+            
+            # Display success message with detailed information
+            if release_type == "prod":
+                print(f"✅ Production release created successfully ({bump_type} increment)")
+            else:
+                print(f"✅ Beta release created successfully")
             return True
         except Exception as e:
             print(f"❌ Release creation failed: {e}")
