@@ -141,7 +141,6 @@ class DevelopmentProject(GitMixin, VersionManagerMixin, BaseProject):
         
         # Get current version to display in prompts
         current_version = self._get_current_version()
-        is_beta = self._is_beta_version(current_version)
         
         # For production releases, ask for bump type if not provided
         if release_type == "prod" and bump_type is None:
@@ -199,10 +198,183 @@ class DevelopmentProject(GitMixin, VersionManagerMixin, BaseProject):
             if release_type == "prod":
                 print(f"✅ Production release created successfully ({bump_type} increment)")
             else:
-                print(f"✅ Beta release created successfully")
+                print("✅ Beta release created successfully")
             return True
         except Exception as e:
             print(f"❌ Release creation failed: {e}")
+            return False
+            
+    def _clean_old_package_versions(self, directory: Path) -> str:
+        """
+        Clean old package versions in the given directory, keeping only the latest version of each package.
+        For the latest version, both wheel (.whl) and source distribution files are preserved.
+        
+        This prevents uploading multiple versions of the same package, which PyPI would reject anyway.
+        
+        Args:
+            directory: Path to the directory containing package files
+            
+        Returns:
+            The latest version string found (or empty if no packages found)
+        """
+        import re
+        from packaging import version
+        
+        if not directory.exists():
+            return ""
+            
+        # Group files by package name
+        packages = {}
+        latest_version_found = ""
+        
+        # Regular expressions for matching wheel and source distribution filenames
+        # For wheel: package_name-1.0.0-py3-none-any.whl
+        wheel_pattern = re.compile(r'([^-]+(?:-[^-]+)*)-(\d+\.\d+.*?)(?:-py|\.py)')
+        # For sdist: package_name-1.0.0.tar.gz
+        sdist_pattern = re.compile(r'([^-]+(?:-[^-]+)*)-(\d+\.\d+.*?)\.(?:tar\.gz|zip)')
+        
+        # Categorize files by package name, version and file type
+        for file_path in directory.glob("*"):
+            if not file_path.is_file():
+                continue
+                
+            filename = file_path.name
+            match = wheel_pattern.match(filename) or sdist_pattern.match(filename)
+            
+            if match:
+                package_name, pkg_version = match.groups()
+                # Determine file type (wheel or sdist)
+                file_type = "wheel" if filename.endswith(".whl") else "sdist"
+                
+                if package_name not in packages:
+                    packages[package_name] = []
+                    
+                packages[package_name].append((pkg_version, file_path, file_type))
+        
+        cleaned_files = 0
+        # For each package, keep all distribution types of the latest version
+        for package_name, pkg_files in packages.items():
+            if len(pkg_files) <= 1:
+                # If only one file, it's the latest
+                if pkg_files:
+                    latest_version_found = pkg_files[0][0]  # Get version
+                continue
+                
+            # Get unique versions
+            unique_versions = {item[0] for item in pkg_files}
+            
+            if len(unique_versions) <= 1:
+                # Only one version exists, keep all files
+                latest_version_found = list(unique_versions)[0]
+                continue
+                
+            # Find the latest version using semantic versioning
+            latest_version = max(unique_versions, key=version.parse)
+            latest_version_found = latest_version
+            
+            # Identify files to keep (latest version) and remove (older versions)
+            for pkg_version, file_path, file_type in pkg_files:
+                if pkg_version != latest_version:
+                    print(f"🧹 Removing old version: {file_path.name}")
+                    file_path.unlink()
+                    cleaned_files += 1
+        
+        if cleaned_files > 0:
+            print(f"✅ Cleaned up {cleaned_files} old package versions in {directory}")
+        else:
+            print(f"✓ No old package versions to clean in {directory}")
+            
+        return latest_version_found
+    
+    def _check_pypirc_exists(self) -> bool:
+        """
+        Check if .pypirc file exists in the user's home directory.
+        
+        Returns:
+            True if file exists, False otherwise
+        """
+        import os
+        from pathlib import Path
+        
+        home = Path(os.path.expanduser("~"))
+        pypirc_path = home / ".pypirc"
+        
+        return pypirc_path.exists()
+    
+    def _create_pypirc_template(self) -> bool:
+        """
+        Create a template .pypirc file in the user's home directory.
+        
+        Returns:
+            True if file was created successfully, False otherwise
+        """
+        import os
+        from pathlib import Path
+        
+        print("\n⚠️ No .pypirc file found in your home directory.")
+        print("\n📝 A .pypirc file is recommended to configure PyPI and TestPyPI repositories.")
+        print("\n💡 For more information about PyPI configuration, visit: https://packaging.python.org/en/latest/specifications/pypirc/")
+        
+        # Ask if user wants to create the template file
+        create_file = questionary.confirm("Would you like to create a template .pypirc file now?").ask()
+        
+        if not create_file:
+            print("\n⚠️ Continuing without .pypirc file. You may be prompted for credentials by twine.")
+            return False
+            
+        # Template content with placeholders
+        content = """[distutils]
+index-servers =
+    pypi
+    testpypi
+
+[pypi]
+# For PyPI.org
+username = your_username
+password = your_password_or_token
+
+[testpypi]
+# For test.pypi.org
+repository = https://test.pypi.org/legacy/
+username = your_username
+password = your_password_or_token
+
+# For more secure authentication, consider using API tokens instead of passwords
+# See: https://pypi.org/help/#apitoken
+"""
+        
+        try:
+            # Write the file
+            home = Path(os.path.expanduser("~"))
+            pypirc_path = home / ".pypirc"
+            
+            with open(pypirc_path, 'w') as f:
+                f.write(content)
+                
+            # Set file permissions to be readable only by the owner
+            import stat
+            os.chmod(pypirc_path, stat.S_IRUSR | stat.S_IWUSR)
+            
+            print(f"\n✅ Created .pypirc template at: {pypirc_path}")
+            print("🔐 File permissions set to read/write for owner only.")
+            print("\n⚠️ IMPORTANT: You need to edit this file and replace the placeholders with your actual credentials before deploying.")
+            print("📝 You can use any text editor to update the file.")
+            
+            # Ask if user wants to edit the file now
+            edit_now = questionary.confirm("Would you like to pause the deployment to edit the .pypirc file now?").ask()
+            
+            if edit_now:
+                print("\n✏️ Please edit your .pypirc file now, then press Enter to continue...")
+                input()
+                print("✅ Continuing with deployment...")
+            else:
+                print("\n⚠️ Continuing without editing .pypirc. Authentication may fail.")
+                
+            return True
+            
+        except Exception as e:
+            print(f"\n❌ Failed to create .pypirc template: {e}")
+            print("⚠️ Continuing without .pypirc file. You may be prompted for credentials by twine.")
             return False
             
     def deploy(self, target: Optional[str] = None) -> bool:
@@ -215,39 +387,73 @@ class DevelopmentProject(GitMixin, VersionManagerMixin, BaseProject):
         Returns:
             True if deployment was successful, False otherwise
         """
+        import subprocess
+        
         if target is None:
             target = questionary.select(
                 "Select deployment target:",
-                choices=["test", "prod"]
+                choices=["test.pypi.org", "pypi.org"]
             ).ask()
             
         try:
-            
             # Install twine if needed
             pck_manager = PackageManager(self.get_env_manager().get_runner())
             if not pck_manager.is_installed("twine"):
                 pck_manager.install("twine")
+                
+            # Install packaging if needed (used for version comparison)
+            if not pck_manager.is_installed("packaging"):
+                pck_manager.install("packaging")
+            
+            # Check if .pypirc exists and offer to create a template if not
+            if not self._check_pypirc_exists():
+                self._create_pypirc_template()
             
             # Deploy to the selected target
-            if target == "prod":
+            if target == "pypi.org":
                 # Check if production release exists
                 release_dir = self.project_path / "dist" / "release"
                 if not release_dir.exists() or not list(release_dir.glob("*")):
                     print("⚠️ No production release found. Create a production release first.")
                     return False
-                    
-                self.run("twine", "upload", "dist/release/*")
+                
+                # Clean old package versions, keeping only the latest
+                version = self._clean_old_package_versions(release_dir)
+                
+                # Display deployment information
+                if version:
+                    print(f"📦 Deploying version {version} to PyPI (production)...")
+                
+                # Use subprocess directly instead of self.run
+                subprocess.run(["twine", "upload", "dist/release/*"], 
+                               shell=True,  # Required for glob pattern expansion
+                               check=True,
+                               cwd=str(self.project_path))
             else:
                 # Check if beta release exists
                 beta_dir = self.project_path / "dist" / "beta"
                 if not beta_dir.exists() or not list(beta_dir.glob("*")):
                     print("⚠️ No beta release found. Create a beta release first.")
                     return False
-                    
-                self.run("twine", "upload", "--repository", "testpypi", "dist/beta/*")
+                
+                # Clean old package versions, keeping only the latest
+                version = self._clean_old_package_versions(beta_dir)
+                
+                # Display deployment information
+                if version:
+                    print(f"📦 Deploying version {version} to TestPyPI (test)...")
+                
+                # Use subprocess directly instead of self.run
+                subprocess.run(["twine", "upload", "--repository", "testpypi", "dist/beta/*"],
+                               shell=True,  # Required for glob pattern expansion
+                               check=True,
+                               cwd=str(self.project_path))
                 
             print(f"✅ Deployment to {target} successful")
             return True
+        except subprocess.CalledProcessError as e:
+            print(f"❌ Deployment command failed: {e}")
+            return False
         except Exception as e:
             print(f"❌ Deployment failed: {e}")
             return False
