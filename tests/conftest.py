@@ -4,16 +4,16 @@ Pytest configuration for CICD Tools tests.
 This module contains fixtures and configuration for pytest.
 """
 
-import os
 import shutil
 import tempfile
 from pathlib import Path
+from typing import Generator
 
 import pytest
 
 
 @pytest.fixture
-def temp_dir():
+def temp_dir() -> Generator[Path, None, None]:
     """Create a temporary directory for tests."""
     temp_dir = tempfile.mkdtemp()
     yield Path(temp_dir)
@@ -21,7 +21,7 @@ def temp_dir():
 
 
 @pytest.fixture
-def project_dir(temp_dir):
+def project_dir(temp_dir) -> Generator[Path, None, None]:
     """Create a temporary project directory for tests."""
     project_dir = temp_dir / "test_project"
     project_dir.mkdir()
@@ -29,7 +29,7 @@ def project_dir(temp_dir):
 
 
 @pytest.fixture
-def simple_project_dir(project_dir):
+def simple_project_dir(project_dir)  -> Generator[Path, None, None]:
     """Create a temporary simple project directory for tests."""
     # Add files specific to a simple project
     (project_dir / "setup.py").touch()
@@ -38,7 +38,7 @@ def simple_project_dir(project_dir):
 
 
 @pytest.fixture
-def development_project_dir(project_dir):
+def development_project_dir(project_dir) -> Generator[Path, None, None]:
     """Create a temporary development project directory for tests."""
     # Add files specific to a development project
     (project_dir / "pyproject.toml").touch()

@@ -4,9 +4,8 @@ Template utilities for CICD Tools.
 This module provides utility functions for template operations.
 """
 
-import os
 from pathlib import Path
-from typing import Dict, Any, Optional, List, Tuple
+from typing import Any, Dict, Optional
 
 import yaml
 
@@ -31,6 +30,7 @@ def process_template_variables(
         
     Raises:
         ValueError: If the template doesn't exist
+        
     """
     # Determine templates directory
     if templates_dir is None:
@@ -94,6 +94,7 @@ def detect_template_type(project_dir: Path) -> Optional[str]:
         
     Returns:
         Template type or None if not detected
+
     """
     # Check if the project was created from a template
     config_manager = ConfigManager.get_config(project_dir)
@@ -106,6 +107,16 @@ def detect_template_type(project_dir: Path) -> Optional[str]:
 
 
 def detect_type(project_dir: Path) -> Optional[str]:
+    """
+    Detect the type of a project based on its structure.
+    
+    Args:
+        project_dir: Project directory to analyze
+        
+    Returns:
+        String identifying the project type or None if the type cannot be determined
+        
+    """
     # Try to detect based on project structure
     if _is_development_project(project_dir):
         return "development_project"
@@ -130,6 +141,7 @@ def get_template_info(
         
     Raises:
         ValueError: If the template doesn't exist
+
     """
     # Determine templates directory
     if templates_dir is None:
@@ -175,15 +187,16 @@ def _get_template_config(template_path: Path) -> Dict[str, Any]:
         
     Returns:
         Template configuration
+
     """
     copier_yaml_path = template_path / "copier.yml"
     copier_yaml_alt_path = template_path / "copier.yaml"
     
     if copier_yaml_path.exists():
-        with open(copier_yaml_path, "r", encoding="utf-8") as f:
+        with open(copier_yaml_path, encoding="utf-8") as f:
             return yaml.safe_load(f) or {}
     elif copier_yaml_alt_path.exists():
-        with open(copier_yaml_alt_path, "r", encoding="utf-8") as f:
+        with open(copier_yaml_alt_path, encoding="utf-8") as f:
             return yaml.safe_load(f) or {}
             
     return {}
@@ -198,6 +211,7 @@ def _is_simple_project(project_dir: Path) -> bool:
         
     Returns:
         True if the project is a simple project, False otherwise
+
     """
     # Simple projects typically have a setup.py file or a README.md file
     # We check for README.md as a fallback since it's likely to exist in most projects
@@ -213,6 +227,7 @@ def _is_development_project(project_dir: Path) -> bool:
         
     Returns:
         True if the project is a development project, False otherwise
+
     """
     # Development projects typically have a pyproject.toml file
     # We don't check for .pre-commit-config.yaml because it might be removed if code_analysis_tools is 'no'

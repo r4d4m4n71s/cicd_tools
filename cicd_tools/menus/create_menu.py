@@ -5,13 +5,21 @@ This module provides the CreateMenu class for project creation and updates.
 """
 
 from pathlib import Path
-from typing import Dict, Any, Optional, List
+from typing import Any, Dict
 
-from cicd_tools.menus.menu_utils import Menu, MenuAction, confirm_action, ask_for_input, ask_for_selection
+from cicd_tools.menus.menu_utils import (
+    Menu,
+    MenuAction,
+    ask_for_input,
+    ask_for_selection,
+    confirm_action,
+)
 from cicd_tools.templates.template_manager import TemplateManager
 from cicd_tools.templates.template_utils import get_template_info
 from cicd_tools.utils.config_manager import ConfigManager
 from cicd_tools.utils.jinja_utils import evaluate_jinja_expression
+
+
 class CreateMenu:
     """
     Menu for project creation and updates.
@@ -19,7 +27,7 @@ class CreateMenu:
     This class provides functionality to create and update projects using templates.
     """
     
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize a create menu."""
         self.template_manager = TemplateManager()
         
@@ -29,6 +37,7 @@ class CreateMenu:
         
         Args:
             directory: Directory where the project will be created
+            
         """
         # Loop until user chooses to exit
         while True:
@@ -79,7 +88,7 @@ class CreateMenu:
             elif result.get_redirect() == "AppMenu":
                 # If the result is a Path object, redirect to the AppMenu for that project
                 if isinstance(result.get_result(), Path):
-                    from cicd_tools.menus.app_menu import AppMenu                    
+                    from cicd_tools.menus.app_menu import AppMenu
                     app_menu = AppMenu()
                     app_menu.show_menu(result.get_result())
                 break
@@ -90,6 +99,7 @@ class CreateMenu:
         
         Args:
             directory: Directory where the project will be created
+
         """
         # Get available templates
         templates = self.template_manager.list_templates()
@@ -152,6 +162,7 @@ class CreateMenu:
             
         Returns:
             Dictionary of variable names and values
+
         """
         variables = {}
         
@@ -203,6 +214,7 @@ class CreateMenu:
         
         Args:
             directory: Project directory to update
+
         """
         try:
             # # Get template and project information
@@ -238,9 +250,7 @@ class CreateMenu:
             print(f"Failed to update project: {e}")
             
     def _list_templates(self) -> None:
-        """
-        List available templates.
-        """
+        """List available templates."""
         templates = self.template_manager.list_templates()
         
         if not templates:

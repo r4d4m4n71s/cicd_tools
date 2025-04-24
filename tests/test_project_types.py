@@ -1,22 +1,21 @@
-"""
-Tests for the project type classes.
-"""
+"""Tests for the project type classes."""
 
 import os
 import tempfile
 from pathlib import Path
+from typing import Any, Dict, List
 
 import pytest
 
 from cicd_tools.project_types.base_project import BaseProject
-from cicd_tools.project_types.simple_project import SimpleProject
 from cicd_tools.project_types.development_project import DevelopmentProject
+from cicd_tools.project_types.simple_project import SimpleProject
 
 
 class TestBaseProject(BaseProject):
     """Test implementation of BaseProject."""
     
-    def get_menus(self):
+    def get_menus(self) -> List[Dict[str, Any]]:
         """Return menu actions."""
         return [
             {
@@ -27,7 +26,7 @@ class TestBaseProject(BaseProject):
         ]
 
 
-def test_base_project_init():
+def test_base_project_init() -> None:
     """Test BaseProject initialization."""
     with tempfile.TemporaryDirectory() as temp_dir:
         project = TestBaseProject(Path(temp_dir))
@@ -36,7 +35,7 @@ def test_base_project_init():
         assert project._env_manager is None
 
 
-def test_base_project_get_menus():
+def test_base_project_get_menus() -> None:
     """Test BaseProject get_menus method."""
     with tempfile.TemporaryDirectory() as temp_dir:
         project = TestBaseProject(Path(temp_dir))
@@ -49,7 +48,7 @@ def test_base_project_get_menus():
         assert menus[0]["callback"]() is True
 
 
-def test_simple_project_init():
+def test_simple_project_init() -> None:
     """Test SimpleProject initialization."""
     with tempfile.TemporaryDirectory() as temp_dir:
         project = SimpleProject(Path(temp_dir))
@@ -58,7 +57,7 @@ def test_simple_project_init():
         assert project._env_manager is None
 
 
-def test_simple_project_get_menus(simple_project_dir):
+def test_simple_project_get_menus(simple_project_dir) -> None:
     """Test SimpleProject get_menus method."""
     project = SimpleProject(simple_project_dir)
     
@@ -70,7 +69,7 @@ def test_simple_project_get_menus(simple_project_dir):
     assert menus[2]["name"] == "Clean"
 
 
-def test_development_project_init():
+def test_development_project_init() -> None:
     """Test DevelopmentProject initialization."""
     with tempfile.TemporaryDirectory() as temp_dir:
         project = DevelopmentProject(Path(temp_dir))
@@ -79,7 +78,7 @@ def test_development_project_init():
         assert project._env_manager is None
 
 
-def test_development_project_get_menus(development_project_dir):
+def test_development_project_get_menus(development_project_dir) -> None:
     """Test DevelopmentProject get_menus method."""
     project = DevelopmentProject(development_project_dir)
     
@@ -98,7 +97,7 @@ def test_development_project_get_menus(development_project_dir):
     "GITHUB_ACTIONS" in os.environ,
     reason="Skip project operations in CI"
 )
-def test_simple_project_clean():
+def test_simple_project_clean() -> None:
     """Test SimpleProject clean method."""
     with tempfile.TemporaryDirectory() as temp_dir:
         project_dir = Path(temp_dir)

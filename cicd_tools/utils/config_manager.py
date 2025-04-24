@@ -4,34 +4,31 @@ Configuration management for CICD Tools.
 This module provides functionality for managing project configuration.
 """
 
-import os
-import logging
-import shutil
 from pathlib import Path
-from typing import Dict, Any, Optional, Union, List
+from typing import Any, Dict, List, Optional
+
 import yaml
 
 
 class NotAProjectDirectoryError(Exception):
     """Raised when an operation requires a project directory but the path is not a valid project."""
-    pass
 
 CICD_TOOLS_CACHE_FILE = '.app_cache/config.yaml'
 
 class ConfigManager:
-    
     """
     Manages project configuration using YAML storage.
     
     This class provides functionality to load, save, and access configuration values.
     """
     
-    def __init__(self, config_path: Path):
+    def __init__(self, config_path: Path) -> None:
         """
         Initialize a configuration manager.
         
         Args:
             config_path: Path to the configuration file
+        
         """
         self.config_path = config_path
         self.config: Dict[str, Any] = {}                
@@ -45,13 +42,30 @@ class ConfigManager:
         """
         if self.config_path.exists():
             try:
-                with open(self.config_path, 'r', encoding='utf-8') as f:
+                with open(self.config_path, encoding='utf-8') as f:
                     loaded_config = yaml.safe_load(f)
                     self.config = loaded_config if loaded_config else {}
             except Exception as e:
                 print(f"Error loading configuration: {e}")
                 self.config = {}
         
+    def _is_project_directory(self) -> bool:
+        """
+        Check if the current directory is a valid project directory.
+        
+        Returns:
+            True if the directory is a valid project directory, False otherwise
+
+        """
+        # A project directory is valid if it contains a pyproject.toml, setup.py, 
+        # or is explicitly created as a project directory
+        project_root = self.config_path.parent.parent  # Go up from .app_cache
+        has_pyproject = (project_root / "pyproject.toml").exists()
+        has_setup = (project_root / "setup.py").exists()
+        has_project_marker = self.get("project", {}).get("initialized", False)
+        
+        return has_pyproject or has_setup or has_project_marker
+    
     def save_config(self) -> None:
         """
         Save configuration to YAML file.
@@ -61,8 +75,16 @@ class ConfigManager:
         
         Raises:
             NotAProjectDirectoryError: If the directory is not a valid project directory
-        """                
-        # Check if the directory is a project directory                    
+
+        """
+        # Skip validation for initial setup
+        if self.config and not self.config.get("project", {}).get("initialized", False):
+            # If we're setting up initial configuration, we don't need to validate
+            if not self._is_project_directory() and ".app_cache" in str(self.config_path):
+                raise NotAProjectDirectoryError(
+                    f"Not a valid project directory: {self.config_path.parent.parent}"
+                )
+                
         try:
             self.config_path.parent.mkdir(parents=True, exist_ok=True)
             with open(self.config_path, 'w', encoding='utf-8') as f:
@@ -80,6 +102,7 @@ class ConfigManager:
             
         Returns:
             The configuration value, or the default if the key doesn't exist
+
         """
         return self.config.get(key, default)
         
@@ -93,6 +116,7 @@ class ConfigManager:
             
         Raises:
             NotAProjectDirectoryError: If the directory is not a valid project directory
+
         """
         self.config[key] = value
         self.save_config()
@@ -106,6 +130,7 @@ class ConfigManager:
             
         Raises:
             NotAProjectDirectoryError: If the directory is not a valid project directory
+
         """
         if key in self.config:
             del self.config[key]
@@ -117,6 +142,7 @@ class ConfigManager:
         
         Returns:
             A dictionary with all configuration values
+
         """
         return self.config.copy()
         
@@ -126,6 +152,7 @@ class ConfigManager:
         
         Raises:
             NotAProjectDirectoryError: If the directory is not a valid project directory
+
         """
         self.config = {}
         self.save_config()
@@ -139,10 +166,103 @@ class ConfigManager:
             
         Returns:
             Logger configuration dictionary
+
         """
         logger_configs = self.get("logging", {})
         return logger_configs.get(name, logger_configs.get("default", {}))
     
+    def validate_config(self) -> List[str]:
+        """
+        Validate the current configuration.
+        
+        Returns:
+            List of validation error messages, empty if valid
+
+        """
+        errors = []
+        
+        # Validate console section
+        if "console" in self.config:
+            if not isinstance(self.config["console"], dict):
+                errors.append("console section must be a dictionary")
+            elif "stack_trace" in self.config["console"]:
+                if not isinstance(self.config["console"]["stack_trace"], bool):
+                    errors.append("console.stack_trace must be a boolean")
+        
+        # Validate logging section
+        if "logging" in self.config:
+            if not isinstance(self.config["logging"], dict):
+                errors.append("logging section must be a dictionary")
+            if "default" in self.config["logging"]:
+                logging_config = self.config["logging"]["default"]
+                
+                # Check level
+                if "level" in logging_config:
+                    valid_levels = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
+                    if logging_config["level"] not in valid_levels:
+                        errors.append(
+                            f"logging.default.level must be one of {', '.join(valid_levels)}, "
+                            f"got {logging_config['level']}"
+                        )
+                
+                # Check handlers
+                if "handlers" in logging_config:
+                    if not isinstance(logging_config["handlers"], list):
+                        errors.append("logging.default.handlers must be a list")
+                    else:
+                        for i, handler in enumerate(logging_config["handlers"]):
+                            if not isinstance(handler, dict):
+                                errors.append(f"logging.default.handlers[{i}] must be a dictionary")
+                            elif "type" not in handler:
+                                errors.append(f"logging.default.handlers[{i}] missing required key 'type'")
+                            elif handler["type"] not in ["console", "file"]:
+                                errors.append(f"logging.default.handlers[{i}].type must be 'console' or 'file'")
+        
+        # Validate styling section
+        if "styling" in self.config:
+            if not isinstance(self.config["styling"], dict):
+                errors.append("styling section must be a dictionary")
+            
+            # Check colors
+            if "colors" in self.config["styling"]:
+                colors = self.config["styling"]["colors"]
+                if not isinstance(colors, dict):
+                    errors.append("styling.colors must be a dictionary")
+                else:
+                    for color_name, color_value in colors.items():
+                        # Simple check for hex color format
+                        if not isinstance(color_value, str) or not color_value.startswith("#"):
+                            errors.append(f"styling.colors.{color_name} must be a hex color code (e.g. #007BFF)")
+        
+        return errors
+        
+    def from_environment(self) -> None:
+        """
+        Update configuration from environment variables.
+        
+        Environment variables should be prefixed with CICD_TOOLS_.
+        For example, CICD_TOOLS_CONSOLE_STACK_TRACE=true.
+        """
+        import os
+        
+        for key, value in os.environ.items():
+            if key.startswith("CICD_TOOLS_"):
+                # Convert CICD_TOOLS_CONSOLE_STACK_TRACE to console.stack_trace
+                config_key = key[11:].lower().replace("_", ".")
+                
+                # Convert string value to appropriate type
+                if value.lower() in ("true", "yes", "1"):
+                    config_value = True
+                elif value.lower() in ("false", "no", "0"):
+                    config_value = False
+                elif value.isdigit():
+                    config_value = int(value)
+                else:
+                    config_value = value
+                
+                # Set the configuration value
+                self.set(config_key, config_value)
+        
     def setup_default_config(self) -> None:
         """
         Set up default configuration if not present.
@@ -151,6 +271,7 @@ class ConfigManager:
         
         Raises:
             NotAProjectDirectoryError: If the directory is not a valid project directory
+
         """
         default_config = {
             "console": {"stack_trace": False},  # Disabled by default
@@ -197,6 +318,16 @@ class ConfigManager:
                     if subkey not in self.config[key]:
                         self.config[key][subkey] = subvalue
         
+        # Check for environment variables
+        self.from_environment()
+        
+        # Validate configuration
+        errors = self.validate_config()
+        if errors:
+            print("⚠️ Configuration validation errors:")
+            for error in errors:
+                print(f"  - {error}")
+        
         self.save_config()
         
     @staticmethod
@@ -209,6 +340,7 @@ class ConfigManager:
             
         Returns:
             A configuration manager
+
         """
         if config_path is None:
             config_path = Path(".")

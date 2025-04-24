@@ -6,7 +6,8 @@ with minimal functionality.
 """
 
 from pathlib import Path
-from typing import Dict, List, Any
+from typing import Any, Dict, List
+
 from cicd_tools.project_types.base_project import BaseProject
 
 
@@ -18,12 +19,13 @@ class SimpleProject(BaseProject):
     including installation and testing.
     """
     
-    def __init__(self, project_path: Path):
+    def __init__(self, project_path: Path) -> None:
         """
         Initialize a simple project.
         
         Args:
             project_path: Path to the project directory
+            
         """
         super().__init__(project_path)
         
@@ -33,6 +35,7 @@ class SimpleProject(BaseProject):
         
         Returns:
             A list of menu action dictionaries
+
         """
         return self.get_common_menu_items()
         

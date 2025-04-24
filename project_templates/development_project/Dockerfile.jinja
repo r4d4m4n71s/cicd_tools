@@ -1,0 +1,45 @@
+# ===================================================================
+# THIS IS A TEMPLATE FILE - It will be processed by Copier during project creation.
+# The VS Code Dockerfile linter will show errors which can be safely ignored.
+# ===================================================================
+
+# Base image - Python version will be determined from user input ({{python_version}})
+FROM python:{{python_version}}-slim-bullseye@sha256:254d6a4a0511db15a655d6edd06e32e4146a84a63242ea8001ed40ee1324b997
+# ^^ The line above will be replaced with the correct Python version during template rendering
+# Using a pinned digest improves security and reproducibility
+
+# Set working directory
+WORKDIR /app
+
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python dependencies
+COPY pyproject.toml ./
+
+# Copy pre-commit config if GitHub repo is enabled
+# This will be uncommented during template rendering if applicable
+# COPY .pre-commit-config.yaml ./
+
+# Install the project package in development mode
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
+    pip install --no-cache-dir -e ".[dev]"
+
+# Copy project files
+COPY . .
+
+# Create a non-root user for enhanced security
+RUN adduser --disabled-password --gecos "" appuser && \
+    chown -R appuser:appuser /app
+USER appuser
+
+# Default command - module name will be derived from project name
+CMD ["python", "-m", "project_module"]
+# ^^ The line above will be replaced with the correct module name during template rendering

@@ -1,23 +1,20 @@
-"""
-Tests for the release method of the DevelopmentProject class.
-"""
+"""Tests for the release method of the DevelopmentProject class."""
 
-import os
 import tempfile
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from typing import Any, Generator
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 from cicd_tools.project_types.development_project import DevelopmentProject
-from cicd_tools.project_types.mixins import VersionManagerMixin
 
 
 class TestDevelopmentProjectRelease:
     """Test class for the release method of the DevelopmentProject class."""
 
     @pytest.fixture
-    def mock_env_manager(self):
+    def mock_env_manager(self) -> Generator[MagicMock, None, None]:
         """Mock the environment manager."""
         with patch.object(DevelopmentProject, 'get_env_manager') as mock:
             # Configure the mock to return a mock instance
@@ -28,7 +25,7 @@ class TestDevelopmentProjectRelease:
             yield mock
 
     @pytest.fixture
-    def mock_package_manager(self, mock_env_manager):
+    def mock_package_manager(self, mock_env_manager) -> Generator[MagicMock, None, None]:
         """Mock the PackageManager class."""
         with patch('cicd_tools.project_types.development_project.PackageManager') as mock:
             # Configure the mock to return a mock instance
@@ -38,38 +35,38 @@ class TestDevelopmentProjectRelease:
             yield mock
 
     @pytest.fixture
-    def mock_configure_git(self):
+    def mock_configure_git(self) -> Generator[MagicMock, None, None]:
         """Mock the _configure_git_for_release method."""
         with patch.object(DevelopmentProject, '_configure_git_for_release') as mock:
             yield mock
 
     @pytest.fixture
-    def mock_prepare_release_dir(self):
+    def mock_prepare_release_dir(self) -> Generator[MagicMock, None, None]:
         """Mock the _prepare_release_directory method."""
         with patch.object(DevelopmentProject, '_prepare_release_directory') as mock:
             yield mock
 
     @pytest.fixture
-    def mock_run(self):
+    def mock_run(self) -> Generator[MagicMock, None, None]:
         """Mock the run method."""
         with patch.object(DevelopmentProject, 'run') as mock:
             yield mock
             
     @pytest.fixture
-    def mock_bump_version(self):
+    def mock_bump_version(self) -> Generator[MagicMock, None, None]:
         """Mock the bump_version_for_release method."""
         with patch.object(DevelopmentProject, 'bump_version_for_release') as mock:
             yield mock
             
     @pytest.fixture
-    def mock_clean_dist(self):
+    def mock_clean_dist(self) -> Generator[MagicMock, None, None]:
         """Mock the _clean_dist_root method."""
         with patch.object(DevelopmentProject, '_clean_dist_root') as mock:
             yield mock
 
     def test_release_prod(self, mock_package_manager, mock_configure_git, 
                          mock_prepare_release_dir, mock_run,
-                         mock_bump_version, mock_clean_dist):
+                         mock_bump_version, mock_clean_dist) -> None:
         """Test production release process with specified bump type."""
         with tempfile.TemporaryDirectory() as temp_dir:
             project = DevelopmentProject(Path(temp_dir))
@@ -90,7 +87,7 @@ class TestDevelopmentProjectRelease:
 
     def test_release_beta(self, mock_package_manager, mock_configure_git, 
                          mock_prepare_release_dir, mock_run,
-                         mock_bump_version, mock_clean_dist):
+                         mock_bump_version, mock_clean_dist) -> None:
         """Test beta release process."""
         with tempfile.TemporaryDirectory() as temp_dir:
             project = DevelopmentProject(Path(temp_dir))
@@ -108,7 +105,7 @@ class TestDevelopmentProjectRelease:
             mock_run.assert_called_with('python', '-m', 'build')
             mock_prepare_release_dir.assert_called_once_with('beta')
 
-    def test_release_with_exception(self, mock_package_manager, mock_configure_git):
+    def test_release_with_exception(self, mock_package_manager, mock_configure_git) -> None:
         """Test release method when an exception occurs."""
         with tempfile.TemporaryDirectory() as temp_dir:
             project = DevelopmentProject(Path(temp_dir))
@@ -127,7 +124,7 @@ class TestDevelopmentProjectRelease:
 
     def test_release_with_user_selection_beta(self, mock_package_manager, mock_configure_git, 
                                            mock_prepare_release_dir, mock_run,
-                                           mock_bump_version, mock_clean_dist):
+                                           mock_bump_version, mock_clean_dist) -> None:
         """Test release method with user selection of beta release type."""
         with tempfile.TemporaryDirectory() as temp_dir:
             project = DevelopmentProject(Path(temp_dir))
@@ -153,7 +150,7 @@ class TestDevelopmentProjectRelease:
 
     def test_release_with_user_selection_prod(self, mock_package_manager, mock_configure_git, 
                                            mock_prepare_release_dir, mock_run,
-                                           mock_bump_version, mock_clean_dist):
+                                           mock_bump_version, mock_clean_dist) -> None:
         """Test release method with user selection of production release type and bump type."""
         with tempfile.TemporaryDirectory() as temp_dir:
             project = DevelopmentProject(Path(temp_dir))
@@ -161,7 +158,7 @@ class TestDevelopmentProjectRelease:
             # Mock questionary.select to return first 'prod', then 'minor' for bump type
             select_return_values = ['prod', 'minor']
             
-            def select_side_effect(*args, **kwargs):
+            def select_side_effect(*args:Any, **kwargs:Any) -> MagicMock:
                 mock_result = MagicMock()
                 mock_result.ask.return_value = select_return_values.pop(0)
                 return mock_result
@@ -179,7 +176,7 @@ class TestDevelopmentProjectRelease:
                 mock_run.assert_called_with('python', '-m', 'build')
                 mock_prepare_release_dir.assert_called_once_with('prod')
 
-    def test_clean_dist_root(self):
+    def test_clean_dist_root(self) -> None:
         """Test the _clean_dist_root method."""
         with tempfile.TemporaryDirectory() as temp_dir:
             project = DevelopmentProject(Path(temp_dir))
@@ -209,12 +206,12 @@ class TestVersionManagerMixin:
     """Test class for the VersionManagerMixin methods."""
     
     @pytest.fixture
-    def mock_run(self):
+    def mock_run(self) -> Generator[MagicMock, None, None]:
         """Mock the run method."""
         with patch.object(DevelopmentProject, 'run') as mock:
             yield mock
             
-    def test_is_beta_version(self):
+    def test_is_beta_version(self) -> None:
         """Test the _is_beta_version method."""
         with tempfile.TemporaryDirectory() as temp_dir:
             project = DevelopmentProject(Path(temp_dir))
@@ -227,7 +224,7 @@ class TestVersionManagerMixin:
             assert project._is_beta_version('0.1.0') is False
             assert project._is_beta_version('1.2.3') is False
     
-    def test_bump_version_for_release_prod_from_beta(self, mock_run):
+    def test_bump_version_for_release_prod_from_beta(self, mock_run) -> None:
         """Test bump_version_for_release when transitioning from beta to prod."""
         with tempfile.TemporaryDirectory() as temp_dir:
             # Create a minimal project with the mixin
@@ -244,7 +241,7 @@ class TestVersionManagerMixin:
                     # It now gets the default bump_type parameter
                     mock_transition.assert_called_once_with('0.1.0.beta', 'patch')
     
-    def test_bump_version_for_release_prod_from_prod(self, mock_run):
+    def test_bump_version_for_release_prod_from_prod(self, mock_run) -> None:
         """Test bump_version_for_release when already on a production version."""
         with tempfile.TemporaryDirectory() as temp_dir:
             # Create a minimal project with the mixin
@@ -260,7 +257,7 @@ class TestVersionManagerMixin:
                     # Verify _bump_production_version was called
                     mock_bump.assert_called_once()
     
-    def test_bump_version_for_release_beta_from_prod(self, mock_run):
+    def test_bump_version_for_release_beta_from_prod(self, mock_run) -> None:
         """Test bump_version_for_release when transitioning from prod to beta."""
         with tempfile.TemporaryDirectory() as temp_dir:
             # Create a minimal project with the mixin
@@ -276,7 +273,7 @@ class TestVersionManagerMixin:
                     # Verify _transition_prod_to_beta was called with the correct version
                     mock_transition.assert_called_once_with('0.1.0')
     
-    def test_bump_version_for_release_beta_from_beta(self, mock_run):
+    def test_bump_version_for_release_beta_from_beta(self, mock_run) -> None:
         """Test bump_version_for_release when already on a beta version."""
         with tempfile.TemporaryDirectory() as temp_dir:
             # Create a minimal project with the mixin
@@ -292,7 +289,7 @@ class TestVersionManagerMixin:
                     # Verify _bump_beta_version was called
                     mock_bump.assert_called_once()
     
-    def test_transition_beta_to_prod(self, mock_run):
+    def test_transition_beta_to_prod(self, mock_run) -> None:
         """Test the _transition_beta_to_prod method."""
         with tempfile.TemporaryDirectory() as temp_dir:
             # Create a minimal project with the mixin
@@ -308,16 +305,16 @@ class TestVersionManagerMixin:
             project._transition_beta_to_prod('0.1.0b0')
             mock_run.assert_called_with('bump2version', '--allow-dirty', '--new-version', '0.1.1', 'patch', capture_output=False)
     
-    def test_transition_prod_to_beta(self, mock_run):
+    def test_transition_prod_to_beta(self, mock_run) -> None:
         """Test the _transition_prod_to_beta method."""
         with tempfile.TemporaryDirectory() as temp_dir:
             # Create a minimal project with the mixin
             project = DevelopmentProject(Path(temp_dir))
             
             project._transition_prod_to_beta('0.1.0')
-            mock_run.assert_called_with('bump2version', 'patch', '--allow-dirty', '--new-version', '0.1.0b0', capture_output=False)
+            mock_run.assert_called_with('bump2version', 'patch', '--allow-dirty', '--new-version', '0.1.0b0', capture_output=False)  # noqa: E501
 
-    def test_bump_beta_version(self, mock_run):
+    def test_bump_beta_version(self, mock_run) -> None:
         """Test the _bump_beta_version method."""
         with tempfile.TemporaryDirectory() as temp_dir:
             # Create a minimal project with the mixin
@@ -326,7 +323,7 @@ class TestVersionManagerMixin:
             project._bump_beta_version()
             mock_run.assert_called_with('bump2version', 'beta', capture_output=False)
     
-    def test_bump_production_version(self, mock_run):
+    def test_bump_production_version(self, mock_run) -> None:
         """Test the _bump_production_version method for a production version."""
         with tempfile.TemporaryDirectory() as temp_dir:
             # Create a minimal project with the mixin
@@ -346,7 +343,7 @@ class TestVersionManagerMixin:
                     )
 
 
-    def test_bump_production_version_from_beta(self, mock_run):
+    def test_bump_production_version_from_beta(self, mock_run) -> None:
         """Test the _bump_production_version method when starting from a beta version."""
         with tempfile.TemporaryDirectory() as temp_dir:
             # Create a minimal project with the mixin
@@ -365,7 +362,7 @@ class TestVersionManagerMixin:
                         # It now includes the default bump_type parameter
                         mock_transition.assert_called_once_with('0.1.8b0', 'patch')
                         
-    def test_calculate_next_version(self):
+    def test_calculate_next_version(self) -> None:
         """Test the _calculate_next_version method for different scenarios."""
         with tempfile.TemporaryDirectory() as temp_dir:
             project = DevelopmentProject(Path(temp_dir))

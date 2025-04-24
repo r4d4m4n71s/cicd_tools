@@ -4,16 +4,17 @@ Template management for CICD Tools.
 This module provides functionality for managing project templates using Copier.
 """
 
-from pathlib import Path
-from typing import Dict, Any, Optional, List, Generator
-from datetime import datetime
-import tempfile
-import shutil
 import contextlib
-from cicd_tools.templates.template_utils import detect_type
+import shutil
+import tempfile
+from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, Generator, List, Optional
+
 import yaml
 from copier import run_copy
 
+from cicd_tools.templates.template_utils import detect_type
 from cicd_tools.utils.config_manager import ConfigManager
 
 
@@ -28,6 +29,7 @@ def temp_template(template_path: Path, processed_answers: Dict[str, Any]) -> Gen
         
     Yields:
         Path to the temporary template
+
     """
     # Create a temporary directory for the modified template
     temp_dir = tempfile.mkdtemp()
@@ -41,7 +43,7 @@ def temp_template(template_path: Path, processed_answers: Dict[str, Any]) -> Gen
         for config_name in ["copier.yaml", "copier.yml"]:
             config_path = temp_template_path / config_name
             if config_path.exists():
-                with open(config_path, "r", encoding="utf-8") as f:
+                with open(config_path, encoding="utf-8") as f:
                     config = yaml.safe_load(f)
                 
                 # Update default values with processed answers
@@ -70,12 +72,13 @@ class TemplateManager:
     This class provides functionality to create and update projects using templates.
     """
     
-    def __init__(self, templates_dir: Optional[Path] = None):
+    def __init__(self, templates_dir: Optional[Path] = None) -> None:
         """
         Initialize a template manager.
         
         Args:
             templates_dir: Directory containing templates
+
         """
         if templates_dir is None:
             # Default to the project_templates directory in the package
@@ -90,6 +93,7 @@ class TemplateManager:
         
         Returns:
             List of template names
+
         """
         if not self.templates_dir.exists():
             return []
@@ -116,6 +120,7 @@ class TemplateManager:
         Raises:
             ValueError: If the template doesn't exist
             RuntimeError: If project creation fails
+            
         """
         template_path = self.templates_dir / template_name
         
@@ -137,8 +142,18 @@ class TemplateManager:
         except Exception as e:
             raise RuntimeError(f"Failed to create project: {e}") from e
             
-    def is_project_from_template(self, dir: Path) -> Dict[str, Any]:        
+    def is_project_from_template(self, dir: Path) -> Dict[str, Any]:
+        """
+        Check if a directory is a project created from a template.
         
+        Args:
+            dir: Directory to check
+            
+        Returns:
+            Template configuration dictionary if the directory is a project from a template,
+            otherwise False
+
+        """
         # Check if the directory is a project directory
         if not detect_type(dir):
             return False        
@@ -162,6 +177,7 @@ class TemplateManager:
         Raises:
             ValueError: If the project wasn't created from a template
             RuntimeError: If project update fails
+            
         """
         # Get template configuration
         config_manager = ConfigManager.get_config(project_dir)
@@ -197,7 +213,7 @@ class TemplateManager:
         is_update: bool
     ) -> None:
         """
-        Common method for processing project creation and updates.
+        Process project creation and updates.
         
         Args:
             template_name: Name of the template
@@ -208,6 +224,7 @@ class TemplateManager:
             
         Raises:
             RuntimeError: If project processing fails
+            
         """
         # Process template variables
         processed_answers = self._process_template_variables(template_name, project_dir, variables)
@@ -252,6 +269,7 @@ class TemplateManager:
             
         Returns:
             Processed template variables
+
         """
         # Get default variables from template
         defaults = self.get_project_defaults(config_path)
@@ -279,6 +297,7 @@ class TemplateManager:
             
         Returns:
             Default template variables
+
         """
         defaults = {}
         
@@ -304,6 +323,7 @@ class TemplateManager:
             
         Returns:
             Default template variables
+
         """
         answers = {}
         
@@ -311,7 +331,7 @@ class TemplateManager:
         for config_name in ["copier.yaml", "copier.yml"]:
             config_path = template_path / config_name
             if config_path.exists():
-                with open(config_path, "r", encoding="utf-8") as f:
+                with open(config_path, encoding="utf-8") as f:
                     config = yaml.safe_load(f)                        
                 # Extract questions from the config
                 for key, value in config.items():
@@ -335,15 +355,16 @@ class TemplateManager:
             
         Returns:
             Template version
+
         """
         copier_yaml_path = template_path / "copier.yml"
         copier_yaml_alt_path = template_path / "copier.yaml"
         
         if copier_yaml_path.exists():
-            with open(copier_yaml_path, "r", encoding="utf-8") as f:
+            with open(copier_yaml_path, encoding="utf-8") as f:
                 config = yaml.safe_load(f)
         elif copier_yaml_alt_path.exists():
-            with open(copier_yaml_alt_path, "r", encoding="utf-8") as f:
+            with open(copier_yaml_alt_path, encoding="utf-8") as f:
                 config = yaml.safe_load(f)
         else:
             return "0.1.0"  # Default version
@@ -375,6 +396,7 @@ class TemplateManager:
             
         Returns:
             Dict containing the user's answers
+            
         """                
         # Prepare data dictionary from processed variables
         data = data or {}

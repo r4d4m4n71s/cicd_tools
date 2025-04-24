@@ -9,13 +9,13 @@ import os
 import sys
 import tempfile
 from pathlib import Path
+from typing import Any, Dict, List
 
 import pytest
-
 from env_manager import Environment, EnvManager, PackageManager
 
 
-def test_environment_init():
+def test_environment_init() -> None:
     """Test Environment initialization."""
     # Test with current environment
     env = Environment()
@@ -34,7 +34,7 @@ def test_environment_init():
         assert env.name == os.path.basename(temp_dir)
 
 
-def test_env_manager_init():
+def test_env_manager_init() -> None:
     """Test BaseEnvManager initialization."""
     # Test with current environment
     env_manager = EnvManager()
@@ -56,7 +56,7 @@ def test_env_manager_init():
     "GITHUB_ACTIONS" in os.environ,
     reason="Skip virtual environment creation in CI"
 )
-def test_env_manager_create_remove():
+def test_env_manager_create_remove() -> None:
     """Test BaseEnvManager create and remove methods."""
     with tempfile.TemporaryDirectory() as temp_dir:
         # Create a virtual environment
@@ -78,7 +78,7 @@ def test_env_manager_create_remove():
     "GITHUB_ACTIONS" in os.environ,
     reason="Skip virtual environment creation in CI"
 )
-def test_env_manager_run():
+def test_env_manager_run() -> None:
     """Test BaseEnvManager run method."""
     with tempfile.TemporaryDirectory() as temp_dir:
         # Create a virtual environment
@@ -96,30 +96,30 @@ def test_env_manager_run():
     "GITHUB_ACTIONS" in os.environ,
     reason="Skip virtual environment creation in CI"
 )
-def test_env_manager_install_pkg():
+def test_env_manager_install_pkg() -> None:
     """Test BaseEnvManager install_pkg method."""
     with tempfile.TemporaryDirectory() as temp_dir:
         # Create a virtual environment
         env_manager = EnvManager(temp_dir, clear=True)
         
         # Install a package
-        packageManager = PackageManager(env_manager.get_runner())
-        packageManager.install("pytest")
+        package_manager = PackageManager(env_manager.get_runner())
+        package_manager.install("pytest")
 
         # Check that the package was installed
-        assert "pytest" in packageManager.list_packages()
+        assert "pytest" in package_manager.list_packages()
 
 
 @pytest.mark.skipif(
     "GITHUB_ACTIONS" in os.environ,
     reason="Skip virtual environment creation in CI"
 )
-def test_run_with_progress():
+def test_run_with_progress() -> None:
     """Test run method with progress tracking in BaseProject."""
     from cicd_tools.project_types.base_project import BaseProject
     
     class TestProject(BaseProject):
-        def get_menus(self):
+        def get_menus(self) -> List[Dict[str, Any]]:
             return []
     
     with tempfile.TemporaryDirectory() as temp_dir:

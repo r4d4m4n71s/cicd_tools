@@ -7,13 +7,15 @@ with development capabilities.
 
 import shutil
 from pathlib import Path
-from typing import Dict, List, Any, Optional
+from typing import Any, Dict, List, Optional
 
 import questionary
 from env_manager import PackageManager
+
 from cicd_tools.project_types.base_project import BaseProject
 from cicd_tools.project_types.mixins import GitMixin, VersionManagerMixin
 from cicd_tools.utils.config_manager import ConfigManager
+
 
 class DevelopmentProject(GitMixin, VersionManagerMixin, BaseProject):
     """
@@ -23,12 +25,13 @@ class DevelopmentProject(GitMixin, VersionManagerMixin, BaseProject):
     including installation, testing, pre-commit hooks, release management, and deployment.
     """
     
-    def __init__(self, project_path: Path):
+    def __init__(self, project_path: Path) -> None:
         """
         Initialize a development project.
         
         Args:
             project_path: Path to the project directory
+            
         """
         super().__init__(project_path)
         
@@ -38,6 +41,7 @@ class DevelopmentProject(GitMixin, VersionManagerMixin, BaseProject):
         
         Returns:
             A list of menu action dictionaries
+            
         """
         common_menus = self.get_common_menu_items()
         
@@ -53,7 +57,8 @@ class DevelopmentProject(GitMixin, VersionManagerMixin, BaseProject):
         if code_analysis_tools == "yes":
             dev_menus.append({
                 "name": "Prehook",
-                "description": "Configure pre-commit hooks to automatically check code quality before commits, ensuring consistent standards and preventing issues from being committed",
+                "description": "Configure pre-commit hooks to automatically check code quality before commits, "
+                "ensuring consistent standards and preventing issues from being committed",
                 "callback": self.prehook,
                 "icon": "🔄",
                 "pause_after_execution": True,  # Pause after prehook to show output
@@ -64,7 +69,8 @@ class DevelopmentProject(GitMixin, VersionManagerMixin, BaseProject):
         dev_menus.extend([
             {
                 "name": "Release",
-                "description": "Create a versioned release package for distribution, including version bumping, building artifacts, and preparing release directories for beta or production",
+                "description": "Create a versioned release package for distribution, including version bumping, "
+                "building artifacts, and preparing release directories for beta or production",
                 "callback": self.release,
                 "icon": "🚀",
                 "pause_after_execution": True,  # Pause after release to show output
@@ -72,7 +78,8 @@ class DevelopmentProject(GitMixin, VersionManagerMixin, BaseProject):
             },
             {
                 "name": "Deploy",
-                "description": "Deploy the project to test or production environments, uploading packages to PyPI or TestPyPI repositories for distribution to end users",
+                "description": "Deploy the project to test or production environments, "
+                "uploading packages to PyPI or TestPyPI repositories for distribution to end users",
                 "callback": self.deploy,
                 "icon": "📦",
                 "pause_after_execution": True,  # Pause after deploy to show output
@@ -98,6 +105,7 @@ class DevelopmentProject(GitMixin, VersionManagerMixin, BaseProject):
         
         Returns:
             True if build was successful, False otherwise
+
         """      
         try:
             # Build the project using pyproject.toml instead of setup.py
@@ -113,6 +121,7 @@ class DevelopmentProject(GitMixin, VersionManagerMixin, BaseProject):
     def _clean_dist_root(self) -> None:
         """
         Clean up the root of the dist folder while preserving subdirectories.
+        
         This prevents copying outdated files during the release process.
         """
         dist_dir = self.project_path / "dist"
@@ -132,6 +141,7 @@ class DevelopmentProject(GitMixin, VersionManagerMixin, BaseProject):
             
         Returns:
             True if release creation was successful, False otherwise
+            
         """
         if release_type is None:
             release_type = questionary.select(
@@ -207,8 +217,8 @@ class DevelopmentProject(GitMixin, VersionManagerMixin, BaseProject):
     def _clean_old_package_versions(self, directory: Path) -> str:
         """
         Clean old package versions in the given directory, keeping only the latest version of each package.
-        For the latest version, both wheel (.whl) and source distribution files are preserved.
         
+        For the latest version, both wheel (.whl) and source distribution files are preserved.
         This prevents uploading multiple versions of the same package, which PyPI would reject anyway.
         
         Args:
@@ -216,8 +226,10 @@ class DevelopmentProject(GitMixin, VersionManagerMixin, BaseProject):
             
         Returns:
             The latest version string found (or empty if no packages found)
+
         """
         import re
+
         from packaging import version
         
         if not directory.exists():
@@ -253,7 +265,7 @@ class DevelopmentProject(GitMixin, VersionManagerMixin, BaseProject):
         
         cleaned_files = 0
         # For each package, keep all distribution types of the latest version
-        for package_name, pkg_files in packages.items():
+        for _package_name, pkg_files in packages.items():
             if len(pkg_files) <= 1:
                 # If only one file, it's the latest
                 if pkg_files:
@@ -273,7 +285,7 @@ class DevelopmentProject(GitMixin, VersionManagerMixin, BaseProject):
             latest_version_found = latest_version
             
             # Identify files to keep (latest version) and remove (older versions)
-            for pkg_version, file_path, file_type in pkg_files:
+            for pkg_version, file_path, _file_type in pkg_files:
                 if pkg_version != latest_version:
                     print(f"🧹 Removing old version: {file_path.name}")
                     file_path.unlink()
@@ -292,6 +304,7 @@ class DevelopmentProject(GitMixin, VersionManagerMixin, BaseProject):
         
         Returns:
             True if file exists, False otherwise
+
         """
         import os
         from pathlib import Path
@@ -307,6 +320,7 @@ class DevelopmentProject(GitMixin, VersionManagerMixin, BaseProject):
         
         Returns:
             True if file was created successfully, False otherwise
+
         """
         import os
         from pathlib import Path
@@ -357,7 +371,8 @@ password = your_password_or_token
             
             print(f"\n✅ Created .pypirc template at: {pypirc_path}")
             print("🔐 File permissions set to read/write for owner only.")
-            print("\n⚠️ IMPORTANT: You need to edit this file and replace the placeholders with your actual credentials before deploying.")
+            print("\n⚠️ IMPORTANT: You need to edit this file and replace " \
+            "the placeholders with your actual credentials before deploying.")
             print("📝 You can use any text editor to update the file.")
             
             # Ask if user wants to edit the file now
@@ -386,6 +401,7 @@ password = your_password_or_token
             
         Returns:
             True if deployment was successful, False otherwise
+
         """
         import subprocess
         
@@ -424,9 +440,16 @@ password = your_password_or_token
                 if version:
                     print(f"📦 Deploying version {version} to PyPI (production)...")
                 
-                # Use subprocess directly instead of self.run
-                subprocess.run(["twine", "upload", "dist/release/*"], 
-                               shell=True,  # Required for glob pattern expansion
+                # Use glob to expand file paths instead of relying on shell=True
+                import glob
+                release_files = glob.glob(str(release_dir / "*"))
+                if not release_files:
+                    print("⚠️ No files found to upload in release directory.")
+                    return False
+                
+                # Use subprocess without shell=True for security
+                subprocess.run(["twine", "upload"] + release_files,
+                               shell=False,
                                check=True,
                                cwd=str(self.project_path))
             else:
@@ -443,9 +466,16 @@ password = your_password_or_token
                 if version:
                     print(f"📦 Deploying version {version} to TestPyPI (test)...")
                 
-                # Use subprocess directly instead of self.run
-                subprocess.run(["twine", "upload", "--repository", "testpypi", "dist/beta/*"],
-                               shell=True,  # Required for glob pattern expansion
+                # Use glob to expand file paths instead of relying on shell=True
+                import glob
+                beta_files = glob.glob(str(beta_dir / "*"))
+                if not beta_files:
+                    print("⚠️ No files found to upload in beta directory.")
+                    return False
+                
+                # Use subprocess without shell=True for security
+                subprocess.run(["twine", "upload", "--repository", "testpypi"] + beta_files,
+                               shell=False,
                                check=True,
                                cwd=str(self.project_path))
                 
@@ -453,9 +483,13 @@ password = your_password_or_token
             return True
         except subprocess.CalledProcessError as e:
             print(f"❌ Deployment command failed: {e}")
+            print("\n⚠️ Please verify your .pypirc file configuration at ~/.pypirc")
+            print("   This file contains your PyPI credentials and repository settings.")
             return False
         except Exception as e:
             print(f"❌ Deployment failed: {e}")
+            print("\n⚠️ Please verify your .pypirc file configuration at ~/.pypirc")
+            print("   This file contains your PyPI credentials and repository settings.")
             return False
                                
         
@@ -465,6 +499,7 @@ password = your_password_or_token
         
         Args:
             release_type: Type of release ('beta' or 'prod')
+
         """
         # Create release directory
         release_dir = self.project_path / "dist" / (

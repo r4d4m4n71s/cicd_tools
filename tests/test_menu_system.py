@@ -1,18 +1,17 @@
-"""
-Tests for the menu system.
-"""
+"""Tests for the menu system."""
 
-import tempfile
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import pytest
-import questionary
+from cicd_tools.menus.menu_utils import (
+    Menu,
+    MenuAction,
+    ask_for_input,
+    ask_for_selection,
+    confirm_action,
+)
 
-from cicd_tools.menus.menu_utils import Menu, MenuAction, confirm_action, ask_for_input, ask_for_selection
 
-
-def test_menu_action_init():
+def test_menu_action_init() -> None:
     """Test MenuAction initialization."""
     callback = MagicMock(return_value=True)
     action = MenuAction("Test Action", "Test description", callback, icon="🔧", arg1="value1")
@@ -24,7 +23,7 @@ def test_menu_action_init():
     assert action.kwargs == {"arg1": "value1"}
 
 
-def test_menu_action_execute():
+def test_menu_action_execute() -> None:
     """Test MenuAction execute method."""
     callback = MagicMock(return_value=True)
     action = MenuAction("Test Action", "Test description", callback, arg1="value1")
@@ -32,7 +31,7 @@ def test_menu_action_execute():
     # Execute without additional arguments
     result = action.execute()
     
-    assert result is True
+    assert result.get_result() is True
     callback.assert_called_once_with(arg1="value1")
     
     # Reset mock
@@ -41,11 +40,11 @@ def test_menu_action_execute():
     # Execute with additional arguments
     result = action.execute("pos_arg", arg2="value2")
     
-    assert result is True
+    assert result.get_result() is True
     callback.assert_called_once_with("pos_arg", arg1="value1", arg2="value2")
 
 
-def test_menu_init():
+def test_menu_init() -> None:
     """Test Menu initialization."""
     menu = Menu("Test Menu")
     
@@ -65,7 +64,7 @@ def test_menu_init():
     assert menu_with_style.style_config == style_config
 
 
-def test_menu_add_action():
+def test_menu_add_action() -> None:
     """Test Menu add_action method."""
     menu = Menu("Test Menu")
     action = MenuAction("Test Action", "Test description", lambda: True)
@@ -77,7 +76,7 @@ def test_menu_add_action():
 
 
 @patch("questionary.select")
-def test_menu_display(mock_select):
+def test_menu_display(mock_select) -> None:
     """Test Menu display method."""
     # Mock questionary.select
     mock_select.return_value.ask.return_value = 0
@@ -93,7 +92,7 @@ def test_menu_display(mock_select):
     # Display menu and select first action
     result = menu.display()
     
-    assert result == "Result 1"
+    assert result.get_result() == "Result 1"
     action1.callback.assert_called_once()
     action2.callback.assert_not_called()
     
@@ -107,7 +106,7 @@ def test_menu_display(mock_select):
     # Display menu and select second action
     result = menu.display()
     
-    assert result == "Result 2"
+    assert result.get_result() == "Result 2"
     action1.callback.assert_not_called()
     action2.callback.assert_called_once()
     
@@ -121,13 +120,13 @@ def test_menu_display(mock_select):
     # Display menu and select back/exit
     result = menu.display()
     
-    assert result is None
+    assert result.get_result() is None
     action1.callback.assert_not_called()
     action2.callback.assert_not_called()
 
 
 @patch("questionary.confirm")
-def test_confirm_action(mock_confirm):
+def test_confirm_action(mock_confirm) -> None:
     """Test confirm_action function."""
     # Mock questionary.confirm
     mock_confirm.return_value.ask.return_value = True
@@ -152,7 +151,7 @@ def test_confirm_action(mock_confirm):
 
 
 @patch("questionary.text")
-def test_ask_for_input(mock_text):
+def test_ask_for_input(mock_text) -> None:
     """Test ask_for_input function."""
     # Mock questionary.text
     mock_text.return_value.ask.return_value = "Input"
@@ -174,7 +173,7 @@ def test_ask_for_input(mock_text):
 
 
 @patch("questionary.select")
-def test_ask_for_selection(mock_select):
+def test_ask_for_selection(mock_select) -> None:
     """Test ask_for_selection function."""
     # Mock questionary.select
     mock_select.return_value.ask.return_value = "Option 2"

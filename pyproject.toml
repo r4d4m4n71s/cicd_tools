@@ -41,6 +41,7 @@ dev = [
     "black>=23.0.0",
     "isort>=5.0.0",
     "mypy>=1.0.0",
+    "ruff>=0.1.6",
     "pre-commit>=3.0.0",
     "bump2version>=1.0.0",
     "build>=0.10.0",
@@ -54,12 +55,12 @@ cicd_tools = "cicd_tools.cli:main"
 packages = ["cicd_tools"]
 
 [tool.black]
-line-length = 88
+line-length = 130
 target-version = ["py38", "py39", "py310", "py311", "py312"]
 
 [tool.isort]
 profile = "black"
-line_length = 88
+line_length = 130
 
 [tool.mypy]
 python_version = "3.8"
@@ -75,3 +76,25 @@ python_functions = "test_*"
 python_classes = "Test*"
 # Test coverage disabled
 # addopts = "--cov=cicd_tools --cov-report=term-missing"
+
+[tool.ruff]
+select = [
+    "E",  # pycodestyle errors
+    "F",  # pyflakes
+    "B",  # flake8-bugbear
+    "I",  # isort
+    "C4", # flake8-comprehensions
+    "UP", # pyupgrade
+    "D",  # pydocstyle
+    "N",  # naming
+    "ANN", # annotations
+]
+ignore = [
+    "D203", # one-blank-line-before-class
+    "D212", # multi-line-summary-first-line
+    "ANN001", # missing-type-self
+    "ANN401", # dynamically-typed-expression
+]
+line-length = 130
+target-version = "py38"
+unfixable = []

@@ -5,10 +5,35 @@
 [![Python](https://img.shields.io/badge/Python-3.8%2B-blue?style=for-the-badge&logo=python)](https://www.python.org/)
 [![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
 [![Code style: black](https://img.shields.io/badge/Code%20Style-Black-black?style=for-the-badge)](https://github.com/psf/black)
+[![Linting: ruff](https://img.shields.io/badge/Linting-Ruff-red?style=for-the-badge)](https://github.com/astral-sh/ruff)
 
 **A flexible framework for development tasks including project creation, testing, building, and deployment.**
 
 </div>
+
+## 🚀 Quick Start
+
+```bash
+# Install the package
+pip install cicd_tools
+
+# Create a new project
+cicd_tools create
+
+# Work with an existing project
+cicd_tools app
+```
+
+### Table of Contents
+- [Features](#-features)
+- [Installation](#-installation)
+- [Detailed Usage Guide](#-detailed-usage-guide)
+- [Project Types](#-project-types)
+- [Template System](#-template-system)
+- [Architecture](#-architecture)
+- [Troubleshooting](#-troubleshooting)
+- [Contributing](#-contributing)
+- [License](#-license)
 
 ---
 
@@ -416,6 +441,79 @@ project_name:
 </details>
 
 ---
+
+## 🏗️ Architecture
+
+The CICD Tools package follows a modular design pattern for extensibility and maintainability:
+
+```mermaid
+graph TD
+    CLI[CLI Module] --> CreateMenu[Create Menu]
+    CLI --> AppMenu[App Menu]
+    CreateMenu --> TemplateManager[Template Manager]
+    AppMenu --> ProjectDetector[Project Type Detector]
+    ProjectDetector --> BaseProject[Base Project]
+    ProjectDetector --> DevProject[Development Project]
+    ProjectDetector --> SimpleProject[Simple Project]
+    BaseProject --> ConfigManager[Config Manager]
+    DevProject --> GitMixin[Git Mixin]
+    DevProject --> VersionMixin[Version Manager Mixin]
+    TemplateManager --> Templates[Project Templates]
+```
+
+### Key Components
+
+- **CLI Module**: Entry point handling command-line arguments and routing to appropriate menus
+- **Create Menu**: Handles the project creation workflow
+- **App Menu**: Provides operations for existing projects
+- **Template Manager**: Manages template rendering using Copier
+- **Project Type Detector**: Identifies project type based on configuration and structure
+- **Base Project & Mixins**: Provides functionality using a composable design pattern
+- **Config Manager**: Centralized configuration handling
+
+## ⚠️ Troubleshooting
+
+Common issues and their solutions:
+
+### Environment Detection Failures
+
+**Problem**: Environment is not detected properly or virtual environment operations fail.
+
+**Solutions**:
+- Ensure Python (3.8+) is correctly installed and in your PATH
+- Check for permissions to create directories in the project folder
+- Try running with administrator/elevated privileges
+- For virtual environment issues, ensure you have the venv module installed
+
+### Template Rendering Problems
+
+**Problem**: Project creation fails during template rendering.
+
+**Solutions**:
+- Verify you have the latest version of CICD Tools
+- Check that all input values match the expected format
+- For custom templates, validate your copier.yaml file syntax
+- Try with a simpler template first to isolate the issue
+
+### Pre-commit Hook Failures
+
+**Problem**: Pre-commit hooks fail or don't run as expected.
+
+**Solutions**:
+- Run `cicd_tools app`, select Prehook → run to see specific failures
+- Ensure you have the dev dependencies installed with `pip install -e ".[dev]"`
+- Check that your files are properly formatted according to the hooks
+- For custom hooks, verify your .pre-commit-config.yaml file
+
+### Release and Deployment Issues
+
+**Problem**: Release creation or deployment to PyPI fails.
+
+**Solutions**:
+- Ensure you have a properly configured .pypirc file
+- Verify you have permissions to publish to the specified PyPI repository
+- Check that your version is incremented and follows semantic versioning
+- Validate package structure with `twine check dist/*` before deploying
 
 ## 🤝 Contributing
 

@@ -1,18 +1,12 @@
-"""
-Tests for the ConfigManager class.
-"""
+"""Tests for the ConfigManager class."""
 
-import os
 import tempfile
 from pathlib import Path
-
-import pytest
-import yaml
 
 from cicd_tools.utils.config_manager import ConfigManager
 
 
-def test_config_manager_init():
+def test_config_manager_init() -> None:
     """Test ConfigManager initialization."""
     with tempfile.TemporaryDirectory() as temp_dir:
         config_path = Path(temp_dir) / "config.yaml"
@@ -22,7 +16,7 @@ def test_config_manager_init():
         assert config_manager.config == {}
 
 
-def test_config_manager_save_load():
+def test_config_manager_save_load() -> None:
     """Test ConfigManager save and load."""
     with tempfile.TemporaryDirectory() as temp_dir:
         # Create a valid project directory structure
@@ -52,7 +46,7 @@ def test_config_manager_save_load():
         assert config_manager2.get("key2") == {"nested": "value2"}
 
 
-def test_config_manager_get_default():
+def test_config_manager_get_default() -> None:
     """Test ConfigManager get with default value."""
     with tempfile.TemporaryDirectory() as temp_dir:
         config_path = Path(temp_dir) / "config.yaml"
@@ -62,7 +56,7 @@ def test_config_manager_get_default():
         assert config_manager.get("nonexistent", "default") == "default"
 
 
-def test_config_manager_delete():
+def test_config_manager_delete() -> None:
     """Test ConfigManager delete."""
     with tempfile.TemporaryDirectory() as temp_dir:
         # Create a valid project directory structure
@@ -94,7 +88,7 @@ def test_config_manager_delete():
         assert config_manager.get("key2") == "value2"
 
 
-def test_config_manager_get_all():
+def test_config_manager_get_all() -> None:
     """Test ConfigManager get_all."""
     with tempfile.TemporaryDirectory() as temp_dir:
         # Create a valid project directory structure
@@ -120,7 +114,7 @@ def test_config_manager_get_all():
         assert config_manager.get_all() == {"key1": "value1", "key2": "value2"}
 
 
-def test_config_manager_clear():
+def test_config_manager_clear() -> None:
     """Test ConfigManager clear."""
     with tempfile.TemporaryDirectory() as temp_dir:
         # Create a valid project directory structure
@@ -150,7 +144,7 @@ def test_config_manager_clear():
         assert config_manager.get_all() == {}
 
 
-def test_config_manager_get_config():
+def test_config_manager_get_config() -> None:
     """Test ConfigManager get_config."""
     with tempfile.TemporaryDirectory() as temp_dir:
         # Create a valid project directory structure
@@ -166,7 +160,7 @@ def test_config_manager_get_config():
         assert config_manager.config_path == project_dir / '.app_cache/config.yaml'
 
 
-def test_config_manager_get_logger_config():
+def test_config_manager_get_logger_config() -> None:
     """Test ConfigManager get_logger_config method."""
     with tempfile.TemporaryDirectory() as temp_dir:
         # Create a valid project directory structure
@@ -224,7 +218,7 @@ def test_config_manager_get_logger_config():
         assert nonexistent_config["level"] == "INFO"
 
 
-def test_config_manager_setup_default_config():
+def test_config_manager_setup_default_config() -> None:
     """Test ConfigManager setup_default_config method."""
     with tempfile.TemporaryDirectory() as temp_dir:
         # Create a valid project directory structure

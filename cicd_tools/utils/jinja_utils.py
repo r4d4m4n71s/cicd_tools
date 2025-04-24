@@ -4,7 +4,7 @@ Jinja utilities for CICD Tools.
 This module provides utility functions for Jinja template expressions.
 """
 
-from typing import Dict, Any
+from typing import Any, Dict
 
 
 def evaluate_jinja_expression(expression: str, variables: Dict[str, Any], data: Dict[str, Any] = None) -> Any:
@@ -18,6 +18,7 @@ def evaluate_jinja_expression(expression: str, variables: Dict[str, Any], data: 
         
     Returns:
         Evaluated value
+        
     """
     if data is None:
         data = {}

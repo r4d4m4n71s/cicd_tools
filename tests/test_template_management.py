@@ -1,9 +1,5 @@
-"""
-Tests for the template management system.
-"""
+"""Tests for the template management system."""
 
-import os
-import shutil
 import tempfile
 from pathlib import Path
 
@@ -12,14 +8,14 @@ import yaml
 
 from cicd_tools.templates.template_manager import TemplateManager
 from cicd_tools.templates.template_utils import (
-    process_template_variables,
     detect_template_type,
-    get_template_info
+    get_template_info,
+    process_template_variables,
 )
 from cicd_tools.utils.config_manager import ConfigManager
 
 
-def create_test_template(template_dir, template_name):
+def create_test_template(template_dir, template_name) -> None:
     """Create a test template."""
     template_path = template_dir / template_name
     template_path.mkdir(parents=True)
@@ -55,7 +51,7 @@ def create_test_template(template_dir, template_name):
         f.write('[project]\nname = "{{ project_name }}"\nversion = "0.1.0"\n')
 
 
-def test_template_manager_init():
+def test_template_manager_init() -> None:
     """Test TemplateManager initialization."""
     with tempfile.TemporaryDirectory() as temp_dir:
         templates_dir = Path(temp_dir) / "templates"
@@ -66,7 +62,7 @@ def test_template_manager_init():
         assert template_manager.templates_dir == templates_dir
 
 
-def test_template_manager_list_templates():
+def test_template_manager_list_templates() -> None:
     """Test TemplateManager list_templates method."""
     with tempfile.TemporaryDirectory() as temp_dir:
         templates_dir = Path(temp_dir) / "templates"
@@ -84,7 +80,7 @@ def test_template_manager_list_templates():
         assert "template2" in templates
 
 
-def test_process_template_variables():
+def test_process_template_variables() -> None:
     """Test process_template_variables function."""
     with tempfile.TemporaryDirectory() as temp_dir:
         templates_dir = Path(temp_dir) / "templates"
@@ -127,7 +123,7 @@ def test_process_template_variables():
         assert variables["license"] == "MIT"
 
 
-def test_get_template_info():
+def test_get_template_info() -> None:
     """Test get_template_info function."""
     with tempfile.TemporaryDirectory() as temp_dir:
         templates_dir = Path(temp_dir) / "templates"
@@ -148,7 +144,7 @@ def test_get_template_info():
         assert info["variables"]["license"]["choices"] == ["MIT", "Apache-2.0", "GPL-3.0"]
 
 
-def test_template_manager_create_project():
+def test_template_manager_create_project() -> None:
     """Test TemplateManager create_project method."""
     with tempfile.TemporaryDirectory() as temp_dir:
         templates_dir = Path(temp_dir) / "templates"
@@ -227,7 +223,7 @@ def test_template_manager_create_project():
                 raise
 
 
-def test_get_template_defaults_with_jinja_syntax():
+def test_get_template_defaults_with_jinja_syntax() -> None:
     """Test that _get_template_defaults correctly handles default values with Jinja2 template syntax."""
     with tempfile.TemporaryDirectory() as temp_dir:
         templates_dir = Path(temp_dir) / "templates"
@@ -281,7 +277,7 @@ def test_get_template_defaults_with_jinja_syntax():
         assert defaults["author"] == "Test Author"
 
 
-def test_detect_template_type():
+def test_detect_template_type() -> None:
     """Test detect_template_type function."""
     with tempfile.TemporaryDirectory() as temp_dir:
         project_dir = Path(temp_dir) / "project"

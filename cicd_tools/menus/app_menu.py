@@ -5,16 +5,22 @@ This module provides the AppMenu class for project-specific operations with enha
 """
 
 from pathlib import Path
-from typing import Dict, Any, Optional, List, Type
+from typing import Optional, Type
 
-from cicd_tools.menus.menu_utils import Menu, MenuAction, confirm_action, ask_for_input, ask_for_selection
+from cicd_tools.menus.menu_utils import (
+    Menu,
+    MenuAction,
+    ask_for_input,
+    ask_for_selection,
+    confirm_action,
+)
 from cicd_tools.project_types.base_project import BaseProject
-from cicd_tools.project_types.simple_project import SimpleProject
 from cicd_tools.project_types.development_project import DevelopmentProject
+from cicd_tools.project_types.simple_project import SimpleProject
 from cicd_tools.templates.template_utils import detect_template_type
 from cicd_tools.utils.config_manager import ConfigManager
 
-        
+
 class AppMenu:
     """
     Menu for project-specific operations.
@@ -22,7 +28,7 @@ class AppMenu:
     This class provides functionality to work with existing projects.
     """
     
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize an app menu."""
         pass
         
@@ -32,6 +38,7 @@ class AppMenu:
         
         Args:
             project_dir: Project directory to work with
+
         """
         # Clear the screen before showing the menu
         from rich.console import Console
@@ -92,6 +99,7 @@ class AppMenu:
             
         Returns:
             Project type class or None if not detected
+
         """
         # Check if the project was created from a template
         template_type = detect_template_type(project_dir)
@@ -113,6 +121,7 @@ class AppMenu:
             
         Returns:
             True if a new environment was created, False if the environment already existed
+
         """
         # Get project configuration
         config_manager = ConfigManager.get_config(project.project_path)
@@ -155,6 +164,7 @@ class AppMenu:
         
         Args:
             project: Project instance
+
         """
         # Get project configuration
         # Configure new environment if it doesn't exist
@@ -225,6 +235,7 @@ class AppMenu:
         Args:
             project: Project instance
             config_manager: Configuration manager
+
         """
         env_config = config_manager.get("environment")
         
@@ -272,6 +283,7 @@ class AppMenu:
         Args:
             project: Project instance
             config_manager: Configuration manager
+
         """
         env_config = config_manager.get("environment")
         
@@ -319,6 +331,7 @@ class AppMenu:
         Args:
             project: Project instance
             config_manager: Configuration manager
+
         """
         env_name = ask_for_input("Enter environment name:", ".venv")
         

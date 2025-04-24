@@ -6,8 +6,10 @@ to share common functionality.
 """
 
 from typing import Optional
+
 import questionary
 from env_manager import PackageManager
+
 
 class GitMixin:
     """Mixin providing Git-related functionality."""
@@ -21,6 +23,7 @@ class GitMixin:
             
         Returns:
             True if configuration was successful, False otherwise
+
         """
         if action is None:
             action = questionary.select(
@@ -83,13 +86,14 @@ class VersionManagerMixin:
         
         Returns:
             Current version
+
         """
         import re
         
         # Try to get version from .bumpversion.cfg
         bumpversion_cfg = self.project_path / ".bumpversion.cfg"
         if bumpversion_cfg.exists():
-            with open(bumpversion_cfg, "r", encoding="utf-8") as f:
+            with open(bumpversion_cfg, encoding="utf-8") as f:
                 content = f.read()
                 match = re.search(r'current_version\s*=\s*([^\s]+)', content)
                 if match:
@@ -98,7 +102,7 @@ class VersionManagerMixin:
         # Try to get version from pyproject.toml
         pyproject_toml = self.project_path / "pyproject.toml"
         if pyproject_toml.exists():
-            with open(pyproject_toml, "r", encoding="utf-8") as f:
+            with open(pyproject_toml, encoding="utf-8") as f:
                 content = f.read()
                 # Try to find version in the format version = "0.1.0"
                 match = re.search(r'version\s*=\s*"([^"]+)"', content)
@@ -123,6 +127,7 @@ class VersionManagerMixin:
                        - patch: Increment the patch version (e.g., 0.1.8 -> 0.1.9) for bug fixes
                        - minor: Increment the minor version (e.g., 0.1.9 -> 0.2.0) for new features
                        - major: Increment the major version (e.g., 0.9.9 -> 1.0.0) for breaking changes
+
         """
         # Get current version
         current_version = self._get_current_version()
@@ -154,21 +159,24 @@ class VersionManagerMixin:
             
         Returns:
             True if it's a beta version, False otherwise
+
         """
         return 'b' in version or '.beta' in version
         
     def _calculate_next_version(self, current_version: str, bump_type: str, release_type: str) -> str:
         """
-        Calculate what the next version would be based on the current version,
-        bump type, and release type, without actually changing the version.
+        Calculate what the next version would be based on the current version.
         
+        bump type, and release type, without actually changing the version.
+
         Args:
             current_version: Current version string
             bump_type: Type of version increment ('patch', 'minor', or 'major')
             release_type: Type of release ('beta' or 'prod')
-            
+
         Returns:
             The predicted next version string
+            
         """
         # Check if current version is beta
         is_beta = self._is_beta_version(current_version)
@@ -228,6 +236,7 @@ class VersionManagerMixin:
         Args:
             current_version: Current beta version
             bump_type: Type of version increment ('patch', 'minor', or 'major')
+
         """
         # Extract the base version without the beta suffix
         if '.beta' in current_version:
@@ -266,6 +275,7 @@ class VersionManagerMixin:
         
         Args:
             current_version: Current production version
+
         """
         # Extract the base version parts
         parts = current_version.split('.')
@@ -289,6 +299,7 @@ class VersionManagerMixin:
                        - patch: Increment the patch version (e.g., 0.1.8 -> 0.1.9) for bug fixes
                        - minor: Increment the minor version (e.g., 0.1.9 -> 0.2.0) for new features
                        - major: Increment the major version (e.g., 0.9.9 -> 1.0.0) for breaking changes
+
         """
         # Get current version
         current_version = self._get_current_version()

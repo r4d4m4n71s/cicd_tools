@@ -1,0 +1,44 @@
+# ===================================================================
+# THIS IS A TEMPLATE FILE - It will be processed by Copier during project creation.
+# ===================================================================
+
+version: '3.8'
+
+services:
+  # Main application service
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONPATH=/app
+    # The command below will be updated with the correct module name during template rendering
+    command: python -m project_module
+    
+  # Uncomment the following services as needed
+  
+  # Database example (using PostgreSQL)
+  # db:
+  #   image: postgres:13
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data/
+  #   environment:
+  #     - POSTGRES_USER=postgres
+  #     - POSTGRES_PASSWORD=postgres
+  #     - POSTGRES_DB=project_name_db
+  #   ports:
+  #     - "5432:5432"
+  
+  # Redis example (for caching/messaging)
+  # redis:
+  #   image: redis:6
+  #   ports:
+  #     - "6379:6379"
+
+# Define volumes if needed (for persistent data)
+# volumes:
+#   postgres_data:

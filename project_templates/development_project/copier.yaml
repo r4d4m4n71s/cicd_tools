@@ -37,6 +37,18 @@ _tasks:
     {% if enable_testing == 'no' %}
     python -c "import shutil; import os; shutil.rmtree('tests') if os.path.exists('tests') else None"
     {% endif %}
+    
+  # Remove Docker files if Docker is not enabled
+  - >
+    {% if use_docker == 'no' %}
+    python -c "import os; [os.remove(f) for f in ['Dockerfile', 'docker-compose.yml'] if os.path.exists(f)]"
+    {% endif %}
+    
+  # Display message if Docker is enabled
+  - >
+    {% if use_docker == 'yes' %}
+    python -c "print('\n\033[1;32mDocker support has been enabled for your project.\nUse `docker build -t {{ project_name }} .` to build your image and\n`docker-compose up` to run your containerized application.\033[0m\n')"
+    {% endif %}
 
 # Project Information
 project_name:
@@ -142,3 +154,20 @@ code_analysis_tools:
     - "yes"
     - "no"
   when: "{{ use_github_repo == 'yes' }}"
+
+# Docker Configuration
+use_docker:
+  type: str
+  help: |
+    Enable Docker support for containerization.
+    
+    This adds:
+    - Dockerfile: For building a Docker image of your project
+    - docker-compose.yml: For running multiple services together
+    
+    Docker makes your project easier to deploy and ensures consistent 
+    environment across development, testing, and production.
+  default: "no"
+  choices:
+    - "yes"
+    - "no"

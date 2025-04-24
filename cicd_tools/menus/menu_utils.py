@@ -4,16 +4,15 @@ Menu utilities for CICD Tools.
 This module provides common menu functionality for CICD Tools with enhanced styling.
 """
 
-from typing import List, Callable, Dict, Any, Optional, Union, TypeVar, Generic
-
-T = TypeVar('T')
+from typing import Any, Callable, Dict, Generic, List, Optional, TypeVar, Union
 
 import questionary
 from questionary import Choice
 from rich.console import Console
 from rich.panel import Panel
 from rich.text import Text
-from rich.style import Style
+
+T = TypeVar('T')
 
 # Initialize Rich console
 console = Console()
@@ -28,6 +27,7 @@ def style_text(text: str, style_str: str) -> Text:
         
     Returns:
         Styled Text object
+        
     """
     return Text(text, style=style_str)
 
@@ -38,6 +38,7 @@ def display_header(title: str, subtitle: Optional[str] = None) -> None:
     Args:
         title: Title text
         subtitle: Optional subtitle text
+
     """
     console.clear()
     console.print(Panel(
@@ -53,13 +54,14 @@ class ActionResult(Generic[T]):
     This class encapsulates the result of a menu action, including the redirect value and the result of the callback.
     """
     
-    def __init__(self, result: T, redirect: Optional[str] = None):
+    def __init__(self, result: T, redirect: Optional[str] = None) -> None:
         """
         Initialize an action result.
         
         Args:
             result: The result of the callback function
             redirect: The redirect value (e.g., 'back', 'exit')
+
         """
         self.result = result
         self.redirect = redirect
@@ -70,6 +72,7 @@ class ActionResult(Generic[T]):
         
         Returns:
             The redirect value, or None if no redirect was specified
+
         """
         return self.redirect
         
@@ -79,6 +82,7 @@ class ActionResult(Generic[T]):
         
         Returns:
             The result of the callback function
+
         """
         return self.result
 
@@ -89,7 +93,7 @@ class MenuAction:
     This class encapsulates a menu action with a name, description, icon, and callback function.
     """
     
-    def __init__(self, name: str, description: str, callback: Callable, icon: Optional[str] = None, **kwargs):
+    def __init__(self, name: str, description: str, callback: Callable, icon: Optional[str] = None, **kwargs:Any) -> None:
         """
         Initialize a menu action.
         
@@ -101,6 +105,7 @@ class MenuAction:
             **kwargs: Additional arguments to pass to the callback
                 - pause_after_execution: Whether to pause after executing the action (default: False)
                 - redirect: Where to redirect after execution ('back', 'exit', or None to stay in current menu)
+
         """
         self.name = name
         self.description = description
@@ -108,7 +113,7 @@ class MenuAction:
         self.icon = icon
         self.kwargs = kwargs
         
-    def execute(self, *args, **kwargs) -> Any:
+    def execute(self, *args:Any, **kwargs:Any) -> Any:
         """
         Execute the menu action.
         
@@ -118,6 +123,7 @@ class MenuAction:
             
         Returns:
             The result of the callback function
+
         """
         # Merge the kwargs from initialization with the ones passed to execute
         merged_kwargs = {**self.kwargs, **kwargs}
@@ -145,13 +151,14 @@ class Menu:
     with enhanced styling.
     """
     
-    def __init__(self, title: str, style_config: Optional[Dict[str, Any]] = None):
+    def __init__(self, title: str, style_config: Optional[Dict[str, Any]] = None) -> None:
         """
         Initialize a menu.
         
         Args:
             title: Title of the menu
             style_config: Optional styling configuration
+
         """
         self.title = title
         self.actions: List[MenuAction] = []
@@ -163,6 +170,7 @@ class Menu:
         
         Args:
             action: The menu action to add
+
         """
         self.actions.append(action)
         
@@ -172,6 +180,7 @@ class Menu:
         
         Returns:
             The result of the selected action, or None if no action was selected
+
         """
         if not self.actions:
             console.print(f"[bold red]No actions available for {self.title}[/bold red]")
@@ -235,6 +244,7 @@ def confirm_action(message: str) -> bool:
         
     Returns:
         True if the user confirmed, False otherwise
+
     """
     return questionary.confirm(message).ask()
 
@@ -249,6 +259,7 @@ def ask_for_input(message: str, default: Optional[Any] = None) -> str:
         
     Returns:
         The user input
+
     """
     # Convert non-string defaults to string, or empty string if None
     if default is None:
@@ -259,16 +270,18 @@ def ask_for_input(message: str, default: Optional[Any] = None) -> str:
     return questionary.text(message, default=default).ask()
 
 
-def ask_for_selection(message: str, choices: List[Union[str, Dict[str, Any]]], default:Optional[Union[str, Choice, Dict[str, Any]]] = None) -> Any:
+def ask_for_selection(message: str, choices: List[Union[str, Dict[str, Any]]], default:Optional[Union[str, Choice, Dict[str, Any]]] = None) -> Any:  # noqa: E501
     """
     Ask the user to select from a list of choices.
     
     Args:
         message: The message to display
         choices: The list of choices
+        default: The default selection to highlight
         
     Returns:
         The selected choice
+
     """
     # # Ensure all choices are properly formatted
     # formatted_choices = []

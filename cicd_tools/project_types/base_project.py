@@ -4,15 +4,23 @@ Base project class for CICD Tools.
 This module provides the abstract base class for all project types.
 """
 
-from abc import ABC, abstractmethod
 import subprocess
+import sys
+from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Dict, List, Any, Optional
+from typing import Any, Dict, List, Optional
 
-# Import EnvManager directly from env_manager
-from env_manager import EnvManager, ProgressRunner, IRunner, PackageManager
-from cicd_tools.utils.config_manager import ConfigManager
 import questionary
+
+from cicd_tools.utils.config_manager import ConfigManager
+
+# Import EnvManager with proper error handling
+try:
+    from env_manager import EnvManager, IRunner, PackageManager, ProgressRunner
+except ImportError:
+    print("Error: python-env-manager package not found.")
+    print("Please install it with: pip install python-env-manager")
+    sys.exit(1)
 
 class BaseProject(ABC):
     """
@@ -22,18 +30,30 @@ class BaseProject(ABC):
     It provides common functionality for project operations.
     """
     
-    def __init__(self, project_path: Path):
+    def __init__(self, project_path: Path) -> None:
         """
         Initialize a project.
         
         Args:
             project_path: Path to the project directory
+        
         """
         self.project_path = project_path
         self._env_manager:EnvManager = None
         
-    def create_env_manager(self, env_path, clear = False):
-         # Initialize environment manager with the project path
+    def create_env_manager(self, env_path: Optional[Path], clear: bool = False) -> EnvManager:
+        """
+        Create and configure an environment manager.
+        
+        Args:
+            env_path: Path to the virtual environment, None for current environment
+            clear: Whether to clear any existing environment
+        
+        Returns:
+            Configured environment manager
+
+        """
+        # Initialize environment manager with the project path
         env_manager = EnvManager(env_path, clear)
         # Replace it with our custom method
         env_manager.get_runner = lambda: self._custom_runner()
@@ -45,6 +65,7 @@ class BaseProject(ABC):
         
         Returns:
             A customized runner instance
+
         """
         config_manager = ConfigManager.get_config(self.project_path)
         stack_trace = config_manager.get("console", {}).get("stack_trace", False)
@@ -67,6 +88,8 @@ class BaseProject(ABC):
         Args:
             env_type: Type of environment ('current' or 'virtual')
             env_name: Name of the virtual environment (if env_type is 'virtual')
+            delete_previus: Whether to delete previous environment if it exists
+            
         """
         config_manager = ConfigManager.get_config(self.project_path)    
 
@@ -80,37 +103,52 @@ class BaseProject(ABC):
             else:
                 venv_path = self.project_path / '.venv'
             
-            if delete_previus and config_manager.get("environment", {}) and Path(config_manager.get("environment", {}).get("path")).exists() and config_manager.get("environment", {}).get("type") == 'virtual':
+            env_config = config_manager.get("environment", {})
+            if (delete_previus and env_config and 
+                Path(env_config.get("path")).exists() and 
+                env_config.get("type") == 'virtual'):
                 import shutil
-                shutil.rmtree(config_manager.get("environment", {}).get("path"))
+                shutil.rmtree(env_config.get("path"))
                 
             # Create the virtual environment if it doesn't exist
             self._env_manager = self.create_env_manager(venv_path)
         
         config_manager.set("environment", {"type": env_type, "path": self._env_manager.env.root})    
     
-    def get_env_manager(self):
-
+    def get_env_manager(self) -> EnvManager:
+        """
+        Get the environment manager for this project.
+        
+        If no environment manager exists yet, create one based on the configuration.
+        
+        Returns:
+            The environment manager
+            
+        Raises:
+            OSError: If no environment is configured
+            
+        """
         if self._env_manager is None:            
             environment = ConfigManager.get_config(self.project_path).get("environment")        
             if not environment:
-                raise EnvironmentError("No environment configured")
+                raise OSError("No environment configured")
             
             if environment.get("type") == 'current':
                 self._env_manager = self.create_env_manager(None)
-            
-            self._env_manager = self.create_env_manager(environment.get("path"))
+            else:
+                self._env_manager = self.create_env_manager(Path(environment.get("path")))
         
         return self._env_manager
     
-    def run(self, *args, capture_output = False, **kwargs):
+    def run(self, *args: str, capture_output: bool = False, **kwargs) -> None:  # noqa: ANN003
         """
         Run a command in the project environment.
         
         Args:
             *args: Positional arguments for the command
-            capture_output: Whether to capture command output (default: True)
+            capture_output: Whether to capture command output (default: False)
             **kwargs: Keyword arguments for the command
+            
         """
         # Set the current working directory to the project path if not specified
         if 'cwd' not in kwargs:
@@ -124,6 +162,7 @@ class BaseProject(ABC):
         
         Returns:
             True if installation was successful, False otherwise
+
         """
         try:
             # Install the project in development mode
@@ -140,6 +179,7 @@ class BaseProject(ABC):
         
         Returns:
             True if build was successful, False otherwise
+
         """      
         try:
             # Ensure setuptools is installed
@@ -165,6 +205,7 @@ class BaseProject(ABC):
         
         Returns:
             True if tests passed, False otherwise
+
         """
         # Check if the runner has inline_output attribute and save its original value
         runner = self.get_env_manager().get_runner()
@@ -184,11 +225,14 @@ class BaseProject(ABC):
             ).ask()
                         
             if test_option == "All tests":
-                runner.run("pytest", ".", "--tb=line", "-v", "--disable-warnings", capture_output=False, cwd=str(self.project_path))
+                runner.run("pytest", ".", "--tb=line", "-v", "--disable-warnings", 
+                           capture_output=False, cwd=str(self.project_path))
             elif test_option == "Failed tests only":
-                runner.run("pytest", ".", "--tb=line", "-v", "--last-failed", "--disable-warnings", capture_output=False, cwd=str(self.project_path))
+                runner.run("pytest", ".", "--tb=line", "-v", "--last-failed", "--disable-warnings", 
+                           capture_output=False, cwd=str(self.project_path))
             elif test_option == "With coverage":
-                runner.run("pytest", ".", "--tb=line", "-v", "--cov", "--disable-warnings", capture_output=False, cwd=str(self.project_path))
+                runner.run("pytest", ".", "--tb=line", "-v", "--cov", "--disable-warnings", 
+                           capture_output=False, cwd=str(self.project_path))
             elif test_option == "With parameters":
                 parameters = questionary.text("Enter the parameters you want to use for testing:").ask()
                 runner.run("pytest", ".", *parameters.split(), capture_output=False, cwd=str(self.project_path))
@@ -206,6 +250,7 @@ class BaseProject(ABC):
         
         Returns:
             True if cleaning was successful, False otherwise
+
         """
         try:
             # Remove build directory
@@ -243,6 +288,7 @@ class BaseProject(ABC):
         
         Returns:
             A list of common menu item dictionaries
+
         """
         # Get configuration
         config_manager = ConfigManager.get_config(self.project_path)
@@ -252,7 +298,8 @@ class BaseProject(ABC):
         common_menus = [
             {
                 "name": "Install",
-                "description": "Install the project in development mode with all dependencies, making it ready for testing and development work",
+                "description": "Install the project in development mode with all dependencies, "
+                "making it ready for testing and development work",
                 "callback": self.install,
                 "icon": "📥",
                 "pause_after_execution": True,  # Pause after installation to show output
@@ -260,7 +307,8 @@ class BaseProject(ABC):
             },
             {
                 "name": "Build",
-                "description": "Build the project into distributable packages, creating artifacts ready for release and distribution",
+                "description": "Build the project into distributable packages, "
+                "creating artifacts ready for release and distribution",
                 "callback": self.build,
                 "icon": "🏗️",
                 "pause_after_execution": True,  # Pause after build to show output
@@ -268,7 +316,8 @@ class BaseProject(ABC):
             },
             {
                 "name": "Clean",
-                "description": "Clean all build artifacts, removing build directories, distribution files, and egg-info to ensure a fresh build environment",
+                "description": "Clean all build artifacts, removing build directories, distribution files, "
+                "and egg-info to ensure a fresh build environment",
                 "callback": self.clean,
                 "icon": "🧹",
                 "pause_after_execution": True,  # Pause after cleaning to show output
@@ -280,7 +329,8 @@ class BaseProject(ABC):
         if template_vars.get("enable_testing", "no") == "yes":
             common_menus.insert(1, {
                 "name": "Test",
-                "description": "Run project tests with various options including all tests, failed tests only, with coverage reports, or with custom parameters",
+                "description": "Run project tests with various options including all tests, failed tests only, "
+                "with coverage reports, or with custom parameters",
                 "callback": self.test,
                 "icon": "🧪",
                 "pause_after_execution": True,  # Pause after tests to show output
@@ -298,6 +348,7 @@ class BaseProject(ABC):
         
         Returns:
             A list of menu action dictionaries
+
         """
         pass
         
@@ -307,6 +358,7 @@ class BaseProject(ABC):
         
         Returns:
             A dictionary with environment configuration
+
         """
         env_manager = self.get_env_manager()
         return {
