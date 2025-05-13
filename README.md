@@ -17,11 +17,35 @@
 # Install the package
 pip install cicd_tools
 
-# Create a new project
-cicd_tools create
+# Create a new project (using long option)
+cicd_tools --create
+# or with short option
+cicd_tools -c
 
-# Work with an existing project
-cicd_tools app
+# Work with an existing project (using long option)
+cicd_tools --app
+# or with short option
+cicd_tools -a
+
+# Initialize configuration (using long option)
+cicd_tools --init
+# or with short option
+cicd_tools -i
+
+# Display version information
+cicd_tools -v
+# or
+cicd_tools --version
+
+# Display help information
+cicd_tools -h
+# or 
+cicd_tools --help
+
+# Enable development tasks (using long option)
+cicd_tools --enable
+# or with short option
+cicd_tools -e
 ```
 
 ### Table of Contents
@@ -75,10 +99,12 @@ pip install -e ".[dev]"
 
 ### 🆕 Creating a New Project
 
-The `create` command allows you to create new projects from templates.
+The `--create` option allows you to create new projects from templates.
 
 ```bash
-cicd_tools create
+cicd_tools --create
+# or using the short form
+cicd_tools -c
 ```
 
 <details>
@@ -86,7 +112,9 @@ cicd_tools create
 
 1. Run the create command:
    ```bash
-   cicd_tools create
+   cicd_tools --create
+   # or
+   cicd_tools -c
    ```
 
 2. Select "Create Project" from the menu.
@@ -122,10 +150,12 @@ cicd_tools create
 
 ### 🔧 Working with an Existing Project
 
-The `app` command allows you to work with existing projects.
+The `--app` option allows you to work with existing projects.
 
 ```bash
-cicd_tools app
+cicd_tools --app
+# or using the short form
+cicd_tools -a
 ```
 
 <details>
@@ -138,7 +168,9 @@ cicd_tools app
 
 2. Run the app command:
    ```bash
-   cicd_tools app
+   cicd_tools --app
+   # or
+   cicd_tools -a
    ```
 
 3. The tool will detect your project type and display appropriate options with enhanced styling:

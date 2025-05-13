@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "cicd_tools"
-version = "0.1.0"
+version = "1.0.2"
 description = "A flexible framework for development tasks including project creation, testing, building, and deployment"
 readme = "README.md"
 authors = [
@@ -26,12 +26,12 @@ classifiers = [
 ]
 requires-python = ">=3.8"
 dependencies = [
-    "questionary==2.1.0",
-    "copier==9.6.0",
-    "pyyaml==6.0.2",
-    "click==8.1.8",
-    "python-env-manager==0.1.0",
-    "rich==13.9.4"
+    "questionary>=2.1.0",
+    "copier>=9.6.0",
+    "pyyaml>=6.0.2",
+    "click>=8.1.8",
+    "python-env-manager>=0.1.0",
+    "rich>=13.9.4"
 ]
 
 [project.optional-dependencies]
@@ -51,8 +51,8 @@ dev = [
 [project.scripts]
 cicd_tools = "cicd_tools.cli:main"
 
-[tool.setuptools]
-packages = ["cicd_tools"]
+[tool.setuptools.packages.find]
+include = ["cicd_tools", "cicd_tools.*"]
 
 [tool.black]
 line-length = 130

@@ -1,5 +1,6 @@
-*.pyc
 cicd_tools.egg-info/
 .coverage
 .vscode/
 _fake_test_build_dir/
+dist/
+*.pyc

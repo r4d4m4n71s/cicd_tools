@@ -93,12 +93,13 @@ class CreateMenu:
                     app_menu.show_menu(result.get_result())
                 break
         
-    def _create_project(self, directory: Path) -> None:
+    def _create_project(self, directory: Path, project_name: str = None) -> None:
         """
         Create a new project from a template.
         
         Args:
             directory: Directory where the project will be created
+            project_name: Optional predefined project name to use
 
         """
         # Get available templates
@@ -117,11 +118,12 @@ class CreateMenu:
         if not template_name:
             return
             
-        # Get project name
-        project_name = ask_for_input("Enter project name:")
-        
-        if not project_name:
-            return
+        # Get project name if not provided
+        if project_name is None:
+            project_name = ask_for_input("Enter project name:")
+            
+            if not project_name:
+                return
             
         # Replace spaces with underscores in project name
         project_name_safe = project_name.replace(" ", "_")
@@ -248,6 +250,56 @@ class CreateMenu:
             print(f"Error: {e}")
         except Exception as e:
             print(f"Failed to update project: {e}")
+            
+    def _recreate_project(self, directory: Path) -> None:
+        """
+        Recreate project using the current directory name as the project name.
+        
+        creating files directly in the specified directory (not in a subfolder).
+
+        Args:
+            directory: Project directory to recreate
+                
+        """
+        # Get the current folder name to use as project name
+        project_name = directory.name
+        
+        print(f"Recreating project using '{project_name}' as project name...")
+        
+        # Get available templates
+        templates = self.template_manager.list_templates()
+        
+        if not templates:
+            print("No templates available")
+            return
+            
+        # Select template
+        template_name = ask_for_selection(
+            "Select a template:",
+            templates
+        )
+        
+        if not template_name:
+            return
+        
+        try:
+            # Initialize project info with project name
+            project_info = {"project_name": project_name}
+            
+            # Create the project directly in the specified directory (not in a subfolder)
+            self.template_manager.create_project(
+                template_name,
+                directory,  # Use the directory directly, not a subdirectory
+                **project_info
+            )
+            
+            print(f"Project created successfully at {directory}")
+            
+            # Return the project directory so it can be used for redirection
+            return directory
+            
+        except Exception as e:
+            print(f"Failed to create project: {e}")
             
     def _list_templates(self) -> None:
         """List available templates."""
