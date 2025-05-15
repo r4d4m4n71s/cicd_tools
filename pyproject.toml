@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "cicd_tools"
-version = "1.0.2"
+version = "1.0.3"
 description = "A flexible framework for development tasks including project creation, testing, building, and deployment"
 readme = "README.md"
 authors = [
@@ -53,6 +53,9 @@ cicd_tools = "cicd_tools.cli:main"
 
 [tool.setuptools.packages.find]
 include = ["cicd_tools", "cicd_tools.*"]
+
+[tool.setuptools.package-data]
+"cicd_tools.project_templates" = ["**/*"]
 
 [tool.black]
 line-length = 130
