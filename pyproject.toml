@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "cicd_tools"
-version = "1.0.4"
+version = "1.0.3"
 description = "A flexible framework for development tasks including project creation, testing, building, and deployment"
 readme = "README.md"
 authors = [
@@ -53,6 +53,7 @@ cicd_tools = "cicd_tools.cli:main"
 
 [tool.setuptools.packages.find]
 include = ["cicd_tools", "cicd_tools.*"]
+exclude = ["tests", "*.__pycache__", "*.tests", "*.tests.*", "tests.*"]
 
 [tool.setuptools]
 # Include all data files, even from hidden directories 
@@ -62,8 +63,7 @@ include-package-data = true
 "cicd_tools.project_templates" = ["**/*", "**/.*/**"]
 
 [tool.setuptools.exclude-package-data]
-"*" = ["**/__pycache__/**"]
-"." = ["tests/**"]
+"*" = ["**/__pycache__/**", "tests/**"]
 
 [tool.black]
 line-length = 130

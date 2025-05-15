@@ -26,7 +26,7 @@ from cicd_tools.utils.config_manager import ConfigManager
     "--directory",
     "-d",
     default=".",
-    help="Directory to work with",
+    help="Directory to work with if its diferent to the current",
     type=click.Path(file_okay=False),
 )
 @click.option("--log_verbose", "-l", is_flag=True, help="Enable verbose output")

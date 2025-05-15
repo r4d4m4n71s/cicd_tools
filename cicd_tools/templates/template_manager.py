@@ -8,8 +8,10 @@ import contextlib
 import shutil
 import tempfile
 from datetime import datetime
+from importlib import resources
+from importlib.abc import Traversable
 from pathlib import Path
-from typing import Any, Dict, Generator, List, Optional
+from typing import Any, Dict, Generator, List, Optional, Union
 
 import yaml
 from copier import run_copy
@@ -19,7 +21,7 @@ from cicd_tools.utils.config_manager import ConfigManager
 
 
 @contextlib.contextmanager
-def temp_template(template_path: Path, processed_answers: Dict[str, Any]) -> Generator[Path, None, None]:
+def temp_template(template_path: Union[Path, Traversable], processed_answers: Dict[str, Any]) -> Generator[Path, None, None]:
     """
     Context manager for creating a temporary template with default values replaced by processed answers.
     
@@ -72,20 +74,10 @@ class TemplateManager:
     This class provides functionality to create and update projects using templates.
     """
     
-    def __init__(self, templates_dir: Optional[Path] = None) -> None:
-        """
-        Initialize a template manager.
-        
-        Args:
-            templates_dir: Directory containing templates
-
-        """
-        if templates_dir is None:
-            # Default to the project_templates directory in the package
-            package_dir = Path(__file__).parent.parent.parent
-            self.templates_dir = package_dir / "project_templates"
-        else:
-            self.templates_dir = templates_dir
+    def __init__(self) -> None:
+        """Initialize a template manager using package resources."""
+        # Use importlib.resources to access templates
+        self.templates_package = "cicd_tools.project_templates"
             
     def list_templates(self) -> List[str]:
         """
@@ -95,13 +87,43 @@ class TemplateManager:
             List of template names
 
         """
-        if not self.templates_dir.exists():
-            return []
-            
+        # List templates using importlib.resources, excluding __pycache__ and dot directories
         return [
-            d.name for d in self.templates_dir.iterdir()
-            if d.is_dir() and not d.name.startswith(".")
+            d.name for d in resources.files(self.templates_package).iterdir()
+            if d.is_dir() and not d.name.startswith(".") and d.name != "__pycache__"
         ]
+        
+    @contextlib.contextmanager
+    def _get_template_path_context(self, template_name: str) -> Generator[Path, None, None]:
+        """
+        Context manager that provides a filesystem path for a template.
+
+        For package resources, creates a temporary copy that's cleaned up after use.
+        
+        Args:
+            template_name: Name of the template
+            
+        Yields:
+            Path to the template
+
+        """
+        # Get the template resource
+        template_resource = resources.files(self.templates_package) / template_name
+        
+        if not template_resource.exists():
+            raise ValueError(f"Template '{template_name}' not found")
+            
+        # Create a temporary copy that tools like Copier can work with
+        temp_dir = tempfile.mkdtemp()
+        temp_path = Path(temp_dir) / template_name
+        
+        try:
+            # Copy the template resources to a temporary path
+            shutil.copytree(template_resource, temp_path)
+            yield temp_path
+        finally:
+            # Clean up temp dir
+            shutil.rmtree(temp_dir)
         
     def create_project(
         self,
@@ -120,11 +142,12 @@ class TemplateManager:
         Raises:
             ValueError: If the template doesn't exist
             RuntimeError: If project creation fails
-            
+
         """
-        template_path = self.templates_dir / template_name
+        # Check if template exists
+        template_resource = resources.files(self.templates_package) / template_name
         
-        if not template_path.exists():
+        if not template_resource.exists():
             raise ValueError(f"Template '{template_name}' not found")
             
         # Ensure the destination directory exists
@@ -134,7 +157,6 @@ class TemplateManager:
             # Use the common method for project creation/update
             self._process_project(
                 template_name=template_name,
-                template_path=template_path,
                 project_dir=destination,
                 variables=variables,
                 is_update=False
@@ -177,7 +199,7 @@ class TemplateManager:
         Raises:
             ValueError: If the project wasn't created from a template
             RuntimeError: If project update fails
-            
+
         """
         # Get template configuration
         config_manager = ConfigManager.get_config(project_dir)
@@ -187,16 +209,15 @@ class TemplateManager:
             raise ValueError("Project wasn't created from a template")
         
         template_name = template_config["name"]
-        template_path = self.templates_dir / template_name
+        template_resource = resources.files(self.templates_package) / template_name
         
-        if not template_path.exists():
+        if not template_resource.exists():
             raise ValueError(f"Template '{template_name}' not found")
         
         try:
             # Use the common method for project creation/update
             self._process_project(
                 template_name=template_name,
-                template_path=template_path,
                 project_dir=project_dir,
                 variables=variables,
                 is_update=True
@@ -207,7 +228,6 @@ class TemplateManager:
     def _process_project(
         self,
         template_name: str,
-        template_path: Path,
         project_dir: Path,
         variables: Dict[str, Any],
         is_update: bool
@@ -217,14 +237,13 @@ class TemplateManager:
         
         Args:
             template_name: Name of the template
-            template_path: Path to the template
             project_dir: Destination directory for the project
             variables: Template variables
             is_update: Whether this is an update operation
             
         Raises:
             RuntimeError: If project processing fails
-            
+
         """
         # Process template variables
         processed_answers = self._process_template_variables(template_name, project_dir, variables)
@@ -233,14 +252,16 @@ class TemplateManager:
         data = {'current_year': datetime.now().year}
         data = {**variables, **data}
         
-        # If processed_answers are not empty, create a temporary template with default values replaced
-        if processed_answers:
-            with temp_template(template_path, processed_answers) as temp_template_path:
-                # Run Copier to create/update the project using the temporary template
-                answers = self._run_copier(temp_template_path, project_dir, data=data)
-        else:
-            # Run Copier to create/update the project using the original template
-            answers = self._run_copier(template_path, project_dir, data=data)
+        # Use the context manager to get a usable filesystem path
+        with self._get_template_path_context(template_name) as template_path:
+            # If processed_answers are not empty, create a temporary template with default values replaced
+            if processed_answers:
+                with temp_template(template_path, processed_answers) as temp_template_path:
+                    # Run Copier to create/update the project using the temporary template
+                    answers = self._run_copier(temp_template_path, project_dir, data=data)
+            else:
+                # Run Copier to create/update the project using the original template
+                answers = self._run_copier(template_path, project_dir, data=data)
         
         # Merge the user's answers with the processed variables
         merged_vars = {**processed_answers, **answers}
@@ -249,7 +270,7 @@ class TemplateManager:
         config_manager = ConfigManager.get_config(project_dir)
         config_manager.set("template", {
             "name": template_name,
-            "version": self._get_template_version(template_path),
+            "version": self._get_template_version(template_name),
             "variables": merged_vars
         })
         
@@ -274,11 +295,10 @@ class TemplateManager:
         # Get default variables from template
         defaults = self.get_project_defaults(config_path)
         
-        # If no stored template variables in app congfig then
+        # If no stored template variables in app config then
         # extract defaults from the template configuration
         if not defaults:
-            template_path = self.templates_dir / template_name    
-            defaults = self._get_template_defaults(template_path)
+            defaults = self._get_template_defaults(template_name)
 
         # Add current year for templates
         current_year = datetime.now().year
@@ -314,12 +334,12 @@ class TemplateManager:
                     
         return defaults
         
-    def _get_template_defaults(self, template_path: Path) -> Dict[str, Any]:
+    def _get_template_defaults(self, template_name: str) -> Dict[str, Any]:
         """
         Get default values from a template configuration.
         
         Args:
-            template_path: Path to the template
+            template_name: Name of the template
             
         Returns:
             Default template variables
@@ -327,49 +347,51 @@ class TemplateManager:
         """
         answers = {}
         
-        # Read the template configuration
-        for config_name in ["copier.yaml", "copier.yml"]:
-            config_path = template_path / config_name
-            if config_path.exists():
-                with open(config_path, encoding="utf-8") as f:
-                    config = yaml.safe_load(f)                        
-                # Extract questions from the config
-                for key, value in config.items():
-                    if isinstance(value, dict) and "type" in value and not key.startswith("_"):
-                        # This is a question, add it to the answers with its default value
-                        if "default" in value:
-                            default_value = value["default"]
-                            # Skip default values that contain Jinja2 template syntax
-                            if not (isinstance(default_value, str) and "{{" in default_value and "}}" in default_value):
-                                answers[key] = default_value
-                break
+        with self._get_template_path_context(template_name) as template_path:
+            # Read the template configuration
+            for config_name in ["copier.yaml", "copier.yml"]:
+                config_path = template_path / config_name
+                if config_path.exists():
+                    with open(config_path, encoding="utf-8") as f:
+                        config = yaml.safe_load(f)                        
+                    # Extract questions from the config
+                    for key, value in config.items():
+                        if isinstance(value, dict) and "type" in value and not key.startswith("_"):
+                            # This is a question, add it to the answers with its default value
+                            if "default" in value:
+                                default_value = value["default"]
+                                # Skip default values that contain Jinja2 template syntax
+                                if not (isinstance(default_value, str) and "{{" in default_value and "}}" in default_value):
+                                    answers[key] = default_value
+                    break
         
         return answers
         
-    def _get_template_version(self, template_path: Path) -> str:
+    def _get_template_version(self, template_name: str) -> str:
         """
         Get the version of a template.
         
         Args:
-            template_path: Path to the template
+            template_name: Name of the template
             
         Returns:
             Template version
 
         """
-        copier_yaml_path = template_path / "copier.yml"
-        copier_yaml_alt_path = template_path / "copier.yaml"
-        
-        if copier_yaml_path.exists():
-            with open(copier_yaml_path, encoding="utf-8") as f:
-                config = yaml.safe_load(f)
-        elif copier_yaml_alt_path.exists():
-            with open(copier_yaml_alt_path, encoding="utf-8") as f:
-                config = yaml.safe_load(f)
-        else:
-            return "0.1.0"  # Default version
+        with self._get_template_path_context(template_name) as template_path:
+            copier_yaml_path = template_path / "copier.yml"
+            copier_yaml_alt_path = template_path / "copier.yaml"
             
-        return config.get("_version", "0.1.0")        
+            if copier_yaml_path.exists():
+                with open(copier_yaml_path, encoding="utf-8") as f:
+                    config = yaml.safe_load(f)
+            elif copier_yaml_alt_path.exists():
+                with open(copier_yaml_alt_path, encoding="utf-8") as f:
+                    config = yaml.safe_load(f)
+            else:
+                return "0.1.0"  # Default version
+                
+            return config.get("_version", "0.1.0")        
     
     def _run_copier(
         self,
@@ -418,7 +440,9 @@ class TemplateManager:
                 return worker.answers.user            
             else:
                 # Fall back to extracting defaults from the template configuration
-                return self._get_template_defaults(template_path)
+                if isinstance(template_path, Path) and template_path.name:
+                    return self._get_template_defaults(template_path.name)
+                return {}
                 
         except Exception as e:
             raise RuntimeError(f"Copier execution failed: {str(e)}") from e
