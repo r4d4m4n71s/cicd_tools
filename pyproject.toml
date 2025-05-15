@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "cicd_tools"
-version = "1.0.3"
+version = "1.0.4"
 description = "A flexible framework for development tasks including project creation, testing, building, and deployment"
 readme = "README.md"
 authors = [
@@ -54,6 +54,10 @@ cicd_tools = "cicd_tools.cli:main"
 [tool.setuptools.packages.find]
 include = ["cicd_tools", "cicd_tools.*"]
 
+[tool.setuptools]
+# Include all data files, even from hidden directories 
+include-package-data = true
+
 [tool.setuptools.package-data]
 "cicd_tools.project_templates" = ["**/*"]
 
@@ -81,6 +85,10 @@ python_classes = "Test*"
 # addopts = "--cov=cicd_tools --cov-report=term-missing"
 
 [tool.ruff]
+line-length = 130
+target-version = "py38"
+
+[tool.ruff.lint]
 select = [
     "E",  # pycodestyle errors
     "F",  # pyflakes
@@ -98,6 +106,4 @@ ignore = [
     "ANN001", # missing-type-self
     "ANN401", # dynamically-typed-expression
 ]
-line-length = 130
-target-version = "py38"
 unfixable = []

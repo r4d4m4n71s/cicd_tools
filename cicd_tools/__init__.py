@@ -5,4 +5,4 @@ This package provides tools for project creation, testing, building, and deploym
 with support for multiple project types and dynamic menus.
 """
 
-__version__ = "1.0.3"
+__version__ = "1.0.4"
