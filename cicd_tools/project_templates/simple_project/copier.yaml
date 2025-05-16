@@ -1,7 +1,7 @@
 # Simple Project Template Configuration
 
 _version: "0.1.0"
-_description: "A simple Python project template with basic structure"
+_description: "Creates a project with basic file structure, example module, readme file, setup for packaging and testing enablement"
 
 # Template configuration
 _templates_suffix: ".jinja"

@@ -22,31 +22,28 @@ cicd_tools --create
 # or with short option
 cicd_tools -c
 
-# Work with an existing project (using long option)
-cicd_tools --app
+# Restore project configuration (using long option)
+cicd_tools --restore
 # or with short option
-cicd_tools -a
-
-# Initialize configuration (using long option)
-cicd_tools --init
-# or with short option
-cicd_tools -i
+cicd_tools -r
 
 # Display version information
 cicd_tools -v
 # or
 cicd_tools --version
 
+# Specify working directory (using long option)
+cicd_tools --directory /path/to/project
+# or with short option
+cicd_tools -d /path/to/project
+
 # Display help information
 cicd_tools -h
 # or 
 cicd_tools --help
-
-# Enable development tasks (using long option)
-cicd_tools --enable
-# or with short option
-cicd_tools -e
 ```
+
+> **Note**: Without any arguments, the tool automatically detects if you're in a project directory and shows the appropriate menu.
 
 ### Table of Contents
 - [Features](#-features)
@@ -150,12 +147,11 @@ cicd_tools -c
 
 ### 🔧 Working with an Existing Project
 
-The `--app` option allows you to work with existing projects.
+When you run CICD Tools without any options in a project directory, it automatically detects the project type and shows the appropriate menu.
 
 ```bash
-cicd_tools --app
-# or using the short form
-cicd_tools -a
+# Simply run without options in a project directory
+cicd_tools
 ```
 
 <details>
@@ -166,11 +162,9 @@ cicd_tools -a
    cd my-project
    ```
 
-2. Run the app command:
+2. Simply run the tool with no options:
    ```bash
-   cicd_tools --app
-   # or
-   cicd_tools -a
+   cicd_tools
    ```
 
 3. The tool will detect your project type and display appropriate options with enhanced styling:
@@ -229,6 +223,21 @@ CICD Tools provides comprehensive environment management capabilities.
 ### ⚙️ Configuration System
 
 CICD Tools uses a centralized configuration system located in `.app_cache/config.yaml`.
+
+#### Restoring Configuration
+
+The `--restore` option allows you to reset a project's configuration to defaults allowing to choose a new template:
+
+```bash
+cicd_tools --restore
+# or using the short form
+cicd_tools -r
+```
+
+This completely clears any existing configuration and applies fresh defaults, which is useful when:
+- You want to start with a clean configuration
+- Your configuration file has become corrupted
+- You've made experimental changes and want to revert to defaults
 
 <details>
 <summary><b>Configuration Options</b></summary>
@@ -409,6 +418,19 @@ Project with GitHub integration:
 ## 📝 Template System
 
 CICD Tools uses Copier for template-based project creation and updates.
+
+### Template Description System
+
+Templates now include rich descriptions to help users choose the appropriate template:
+
+- Each template has a name and description displayed in selection menus
+- Descriptions are defined in the `_description` field in each template's `copier.yaml` file
+- When listing or selecting templates, you'll see both the name and description:
+  ```
+  ? Select a template: (Use arrow keys)
+   > simple_project - Creates a project with basic file structure
+     development_project - Project template with CI/CD workflows, testing, github enablement
+  ```
 
 ### Available Templates
 

@@ -48,8 +48,9 @@ class ConfigManager:
             except Exception as e:
                 print(f"Error loading configuration: {e}")
                 self.config = {}
-        
-    def _is_project_directory(self) -> bool:
+
+    @staticmethod    
+    def is_project_directory(dir_path: Path) -> bool:
         """
         Check if the current directory is a valid project directory.
         
@@ -59,32 +60,18 @@ class ConfigManager:
         """
         # A project directory is valid if it contains a pyproject.toml, setup.py, 
         # or is explicitly created as a project directory
-        project_root = self.config_path.parent.parent  # Go up from .app_cache
-        has_pyproject = (project_root / "pyproject.toml").exists()
-        has_setup = (project_root / "setup.py").exists()
-        has_project_marker = self.get("project", {}).get("initialized", False)
-        
-        return has_pyproject or has_setup or has_project_marker
+        has_pyproject = (dir_path / "pyproject.toml").exists()
+        has_setup = (dir_path / "setup.py").exists()
+                
+        return has_pyproject or has_setup
     
     def save_config(self) -> None:
         """
         Save configuration to YAML file.
         
         Creates parent directories if they don't exist.
-        Only saves if the config_path is in a project directory.
         
-        Raises:
-            NotAProjectDirectoryError: If the directory is not a valid project directory
-
-        """
-        # Skip validation for initial setup
-        if self.config and not self.config.get("project", {}).get("initialized", False):
-            # If we're setting up initial configuration, we don't need to validate
-            if not self._is_project_directory() and ".app_cache" in str(self.config_path):
-                raise NotAProjectDirectoryError(
-                    f"Not a valid project directory: {self.config_path.parent.parent}"
-                )
-                
+        """       
         try:
             self.config_path.parent.mkdir(parents=True, exist_ok=True)
             with open(self.config_path, 'w', encoding='utf-8') as f:
@@ -268,11 +255,15 @@ class ConfigManager:
         Set up default configuration if not present.
         
         This method adds default values for missing configuration entries.
+        First, it clears any existing configuration to ensure a clean state.
         
         Raises:
             NotAProjectDirectoryError: If the directory is not a valid project directory
 
         """
+        # Clear any existing configuration
+        self.config = {}
+        
         default_config = {
             "console": {"stack_trace": False},  # Disabled by default
             "logging": {
@@ -308,15 +299,8 @@ class ConfigManager:
             }
         }
         
-        # Only set defaults for keys that don't exist
-        for key, value in default_config.items():
-            if key not in self.config:
-                self.config[key] = value
-            elif isinstance(self.config[key], dict) and isinstance(value, dict):
-                # Merge nested dictionaries
-                for subkey, subvalue in value.items():
-                    if subkey not in self.config[key]:
-                        self.config[key][subkey] = subvalue
+        # Set all the default configuration values
+        self.config = default_config.copy()
         
         # Check for environment variables
         self.from_environment()

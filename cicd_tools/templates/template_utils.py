@@ -103,7 +103,7 @@ def detect_template_type(project_dir: Path) -> Optional[str]:
     if template_config and "name" in template_config:
         return template_config["name"]
         
-    return detect_type(project_dir)
+    return None
 
 
 def detect_type(project_dir: Path) -> Optional[str]:

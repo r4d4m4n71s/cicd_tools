@@ -20,6 +20,34 @@ from cicd_tools.templates.template_utils import detect_type
 from cicd_tools.utils.config_manager import ConfigManager
 
 
+class Template:
+    """
+    Represents a project template with name and description.
+    
+    This class encapsulates information about a template for easier access.
+    """
+    
+    def __init__(self, name: str, description: str = "") -> None:
+        """
+        Initialize a template.
+        
+        Args:
+            name: Name of the template
+            description: Description of the template
+            
+        """
+        self.name = name
+        self.description = description
+        
+    def __repr__(self) -> str:
+        """Return a string representation of the template."""
+        return f"Template(name='{self.name}', description='{self.description}')"
+        
+    def __str__(self) -> str:
+        """Return a user-friendly string representation of the template."""
+        return self.name
+
+
 @contextlib.contextmanager
 def temp_template(template_path: Union[Path, Traversable], processed_answers: Dict[str, Any]) -> Generator[Path, None, None]:
     """
@@ -79,19 +107,48 @@ class TemplateManager:
         # Use importlib.resources to access templates
         self.templates_package = "cicd_tools.project_templates"
             
-    def list_templates(self) -> List[str]:
+    def list_templates(self) -> List[Template]:
         """
         List available templates.
         
         Returns:
-            List of template names
+            List of Template objects with name and description
 
         """
+        templates = []
+        
         # List templates using importlib.resources, excluding __pycache__ and dot directories
-        return [
+        template_names = [
             d.name for d in resources.files(self.templates_package).iterdir()
             if d.is_dir() and not d.name.startswith(".") and d.name != "__pycache__"
         ]
+        
+        # Create Template objects with name and description
+        for name in template_names:
+            try:
+                # Use _get_template_path_context to access the template's copier.yaml
+                with self._get_template_path_context(name) as template_path:
+                    description = ""
+                    
+                    # Check for both copier.yaml and copier.yml
+                    for config_name in ["copier.yaml", "copier.yml"]:
+                        config_path = template_path / config_name
+                        if config_path.exists():
+                            with open(config_path, encoding="utf-8") as f:
+                                config = yaml.safe_load(f) or {}
+                                # Extract description from _description field
+                                description = config.get("_description", "")
+                                break
+                
+                # Create Template object
+                template = Template(name, description)
+                templates.append(template)
+            except Exception as e:
+                # If there's an error, just use the name without description
+                print(f"Warning: Failed to read description for template '{name}': {e}")
+                templates.append(Template(name))
+        
+        return templates
         
     @contextlib.contextmanager
     def _get_template_path_context(self, template_name: str) -> Generator[Path, None, None]:

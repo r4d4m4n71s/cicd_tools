@@ -173,6 +173,22 @@ class Menu:
 
         """
         self.actions.append(action)
+    
+    def add_spacer(self) -> None:
+        """
+        Add a visual spacer between menu items.
+        
+        This creates a non-selectable space between menu options for better visual organization.
+        """
+        # Create a special MenuAction that represents a spacer
+        spacer = MenuAction(
+            name="",
+            description="",
+            callback=lambda: None,  # Dummy callback that does nothing
+            icon="",
+            is_spacer=True  # Special flag to identify this as a spacer
+        )
+        self.actions.append(spacer)
         
     def display(self) -> ActionResult:
         """
@@ -191,12 +207,27 @@ class Menu:
         
         # Create choices with icons
         choices = []
+        action_index = 0
         for i, action in enumerate(self.actions):
-            icon_text = f"{action.icon} " if action.icon else ""
-            choices.append(Choice(
-                title=f"{icon_text} {action.name} - {action.description}",
-                value=i
-            ))
+            # Check if this is a spacer
+            is_spacer = action.kwargs.get("is_spacer", False)
+            
+            if is_spacer:
+                # Add a spacer as a disabled choice
+                choices.append(Choice(
+                    title=f"{action.name}",
+                    value=None,
+                    disabled=True
+                ))
+            else:
+                # Add normal action
+                icon_text = f"{action.icon} " if action.icon else ""
+                description_text = f" - {action.description}" if action.description else ""
+                choices.append(Choice(
+                    title=f"{icon_text}{action.name}{description_text}",
+                    value=action_index
+                ))
+                action_index += 1
         
         # Add a back/exit option
         choices.append(Choice(title="↩️  Back/Exit", value=None))
@@ -218,19 +249,26 @@ class Menu:
         # If result is still a string, try to find the corresponding action
         if isinstance(result, str):
             # Try to find the action by name
+            non_spacer_index = 0
             for i, action in enumerate(self.actions):
-                action_title = f"{action.name} - {action.description}"
-                if result == action_title or result == action.name:
-                    result = i
-                    break
+                if not action.kwargs.get("is_spacer", False):
+                    action_title = f"{action.name} - {action.description}"
+                    if result == action_title or result == action.name:
+                        result = non_spacer_index
+                        break
+                    non_spacer_index += 1
             else:
                 # If we get here, we couldn't find a matching action
                 # This is a fallback to prevent errors
                 return ActionResult(None, "back")
             
-        # Ensure result is a valid integer index
-        if isinstance(result, int) and 0 <= result < len(self.actions):
-            selected_action = self.actions[result]
+        # Find the actual action based on the non-spacer index
+        if isinstance(result, int):
+            non_spacer_actions = [a for a in self.actions if not a.kwargs.get("is_spacer", False)]
+            if 0 <= result < len(non_spacer_actions):
+                selected_action = non_spacer_actions[result]
+            else:
+                return ActionResult(None, "back")
         else:
             return ActionResult(None, "back")
         return selected_action.execute()

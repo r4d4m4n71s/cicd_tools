@@ -1,7 +1,7 @@
 # Development Project Template Configuration
 
 _version: "0.1.0"
-_description: "A Python development project template with CI/CD workflows"
+_description: "Project template with CI/CD workflows, testing, github enablement and code analysis tools"
 
 # Template configuration
 _templates_suffix: ".jinja"

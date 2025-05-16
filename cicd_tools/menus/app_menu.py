@@ -17,7 +17,7 @@ from cicd_tools.menus.menu_utils import (
 from cicd_tools.project_types.base_project import BaseProject
 from cicd_tools.project_types.development_project import DevelopmentProject
 from cicd_tools.project_types.simple_project import SimpleProject
-from cicd_tools.templates.template_utils import detect_template_type
+from cicd_tools.templates.template_utils import detect_template_type, detect_type
 from cicd_tools.utils.config_manager import ConfigManager
 
 
@@ -64,6 +64,21 @@ class AppMenu:
             # Create menu with styling
             menu = Menu(f"App Menu - {project_dir.name}", style_config)
             
+            # If this is not a project from template, add the conversion option as the last menu item
+            template_type = detect_template_type(project_dir)
+            if not template_type:                
+                menu.add_spacer()            
+                # Add conversion option as the last menu item (as a highlighted option)
+                menu.add_action(MenuAction(
+                    f"Convert {project_dir.name} to CI-CD project",
+                    "Enable features like testing, git workflows, code analysis and so on",
+                    self._convert_to_cicd_project,
+                    icon="⭐⭐",  # Use a star icon to highlight importance
+                    project_dir=project_dir,
+                    pause_after_execution=True,  # Pause needed as this shows output
+                ))
+                menu.add_spacer() 
+
             # Add environment management action with icon
             menu.add_action(MenuAction(
                 "Manage Environment",
@@ -81,14 +96,14 @@ class AppMenu:
                     action["callback"],
                     icon=action.get("icon"),
                     pause_after_execution=action.get("pause_after_execution", False)
-                ))                
-            
+                ))                                       
+                
             # Display the menu and get the result
             result = menu.display()
             
             # If the user selected "Back/Exit" or an action returned a redirect to exit, break the loop
-            if result.get_redirect() in ["back", "exit"]:
-                break
+            #if result.get_redirect() in ["back", "exit"]:
+            break
         
     def _detect_project_type(self, project_dir: Path) -> Optional[Type[BaseProject]]:
         """
@@ -103,6 +118,9 @@ class AppMenu:
         """
         # Check if the project was created from a template
         template_type = detect_template_type(project_dir)
+        
+        if template_type is None:
+            template_type = detect_type(project_dir)
         
         if template_type == "development_project":
             return DevelopmentProject
@@ -320,9 +338,31 @@ class AppMenu:
             
             # Ensure the user has a environment configured for use
             self._configure_new_environment_if_not_exist(project) 
-
         except Exception as e:
             print(f"Failed to delete environment: {e}")
+            
+    def _convert_to_cicd_project(self, project_dir: Path) -> None:
+        """
+        Convert the current directory to a CI-CD project.
+        
+        Args:
+            project_dir: Directory to convert to CI-CD project
+
+        """
+        from cicd_tools.menus.create_menu import CreateMenu
+        
+        # Create create menu instance
+        create_menu = CreateMenu()
+        
+        # Call the recreate_project method
+        result = create_menu._recreate_project(project_dir)
+        
+        # If conversion was successful and resulted in a project
+        if result:
+            print(f"Successfully converted {project_dir.name} to a CI-CD project.")
+            
+            # Show the app menu for the newly converted project
+            self.show_menu(project_dir)
             
     def _create_environment(self, project: BaseProject, config_manager: ConfigManager) -> None:
         """

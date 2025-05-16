@@ -15,7 +15,6 @@ from cicd_tools.menus.menu_utils import (
     confirm_action,
 )
 from cicd_tools.templates.template_manager import TemplateManager
-from cicd_tools.templates.template_utils import get_template_info
 from cicd_tools.utils.config_manager import ConfigManager
 from cicd_tools.utils.jinja_utils import evaluate_jinja_expression
 
@@ -109,14 +108,20 @@ class CreateMenu:
             print("No templates available")
             return
             
+        # Create template choices with descriptions
+        template_choices = [f"{t.name} - {t.description}" if t.description else t.name for t in templates]
+            
         # Select template
-        template_name = ask_for_selection(
+        template_choice = ask_for_selection(
             "Select a template:",
-            templates
+            template_choices
         )
         
-        if not template_name:
+        if not template_choice:
             return
+            
+        # Extract the template name from the selection
+        template_name = template_choice.split(" - ")[0] if " - " in template_choice else template_choice
             
         # Get project name if not provided
         if project_name is None:
@@ -273,14 +278,20 @@ class CreateMenu:
             print("No templates available")
             return
             
+        # Create template choices with descriptions
+        template_choices = [f"{t.name} - {t.description}" if t.description else t.name for t in templates]
+            
         # Select template
-        template_name = ask_for_selection(
-            "Select a template:",
-            templates
+        template_choice = ask_for_selection(
+            "Choose a template for your project:",
+            template_choices
         )
         
-        if not template_name:
+        if not template_choice:
             return
+            
+        # Extract the template name from the selection
+        template_name = template_choice.split(" - ")[0] if " - " in template_choice else template_choice
         
         try:
             # Initialize project info with project name
@@ -312,8 +323,7 @@ class CreateMenu:
         print("Available templates:")
         
         for template in templates:
-            try:
-                template_info = get_template_info(template)
-                print(f"- {template}: {template_info['description']}")
-            except Exception:
-                print(f"- {template}")
+            if template.description:
+                print(f"- {template.name}: {template.description}")
+            else:
+                print(f"- {template.name}")

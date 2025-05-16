@@ -75,6 +75,36 @@ def test_menu_add_action() -> None:
     assert menu.actions[0] == action
 
 
+def test_menu_add_spacer() -> None:
+    """Test Menu add_spacer method."""
+    menu = Menu("Test Menu")
+    
+    # Add a spacer
+    menu.add_spacer()
+    
+    # Verify spacer was added
+    assert len(menu.actions) == 1
+    spacer = menu.actions[0]
+    assert spacer.name == ""
+    assert spacer.description == ""
+    assert spacer.kwargs.get("is_spacer") is True
+    
+    # Test with actions before and after spacer
+    menu = Menu("Test Menu")
+    action1 = MenuAction("Action 1", "Description 1", lambda: True)
+    action2 = MenuAction("Action 2", "Description 2", lambda: False)
+    
+    menu.add_action(action1)
+    menu.add_spacer()
+    menu.add_action(action2)
+    
+    # Verify correct ordering
+    assert len(menu.actions) == 3
+    assert menu.actions[0] == action1
+    assert menu.actions[1].kwargs.get("is_spacer") is True
+    assert menu.actions[2] == action2
+
+
 @patch("questionary.select")
 def test_menu_display(mock_select) -> None:
     """Test Menu display method."""
